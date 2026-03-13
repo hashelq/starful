@@ -401,5 +401,18 @@ export type CompletionTokenLogProbs = unknown;
 
 export interface ChatRequestConfig {
   model: string;
-  messages: Record<string, any>[];
+  messages: Record<string, unknown>[];
+}
+
+export interface CreateModelParameters {
+  model: string;
+  from?: string;
+  files?: Record<string, string>;
+  adapters?: Record<string, string>;
+  template?: string;
+  license?: string | string[];
+  system?: string;
+  parameters?: object;
+  messages?: ChatMessage[];
+  quantize?: string;
 }

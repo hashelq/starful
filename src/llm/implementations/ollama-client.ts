@@ -4,9 +4,6 @@
 
 import type {
   APIConfig,
-  GenerateParameters,
-  ChatParameters,
-  LocalModelInfo,
   ShowModelInfo,
   PsResponse,
   EmbeddingsResponse,
@@ -14,26 +11,10 @@ import type {
   GenerateImageResponse,
   ChatMessage,
   ModelTool,
+  ChatResponse,
+  CreateModelParameters,
+  LocalModelInfo,
 } from "../types/api-types.js";
-
-interface ChatResponse {
-  message: { response?: string; thinking?: string; done: boolean };
-  done: boolean;
-}
-
-// Type for create model parameters (inline instead of importing)
-interface CreateModelParameters {
-  model: string;
-  from?: string;
-  files?: Record<string, string>;
-  adapters?: Record<string, string>;
-  template?: string;
-  license?: string | string[];
-  system?: string;
-  parameters?: object;
-  messages?: any[];
-  quantize?: string;
-}
 
 /**
  * Custom error class for Ollama API errors.
@@ -48,19 +29,6 @@ export class OllamaError extends Error {
   ) {
     super(message);
   }
-}
-
-export interface GenerationOptions {
-  stream?: boolean;
-  temperature?: number;
-  topK?: number;
-  topP?: number;
-  stop?: string[];
-}
-
-export interface ChatOptions {
-  tools?: any[];
-  onToken?: (token: string) => void;
 }
 
 /**
@@ -81,7 +49,7 @@ export class OllamaClient {
 
   private async getResponse<T>(
     endpoint: string,
-    body?: Record<string, any>,
+    body?: Record<string, unknown>,
     streaming = false,
   ): Promise<AsyncIterable<T> | T> {
     const url = `http://${this.config.host}:${this.config.port}${this.config.basepath}${endpoint}`;
@@ -141,9 +109,8 @@ export class OllamaClient {
     model: string,
     messages?: ChatMessage[],
     tools?: ModelTool[],
-    options?: ChatOptions,
   ): Promise<AsyncIterable<ChatResponse>> {
-    const body: Record<string, any> = {
+    const body: Record<string, unknown> = {
       model,
       messages,
       stream: true,
@@ -153,19 +120,22 @@ export class OllamaClient {
       body.tools = tools;
     }
 
-    return await this.getResponse("/api/chat", body) as AsyncIterable<ChatResponse>;
+    return (await this.getResponse(
+      "/api/chat",
+      body,
+    )) as AsyncIterable<ChatResponse>;
   }
 
   /**
    * List all locally available models.
    * Uses GET /api/tags endpoint.
    */
-  async listModels() {
+  async listModels(): Promise<LocalModelInfo> {
     const url = `http://${this.config.host}:${this.config.port}${this.config.basepath}/api/tags`;
     const res = await fetch(url, { headers: this._headers() });
 
     if (!res.ok) throw new OllamaError(`Failed to list models`, res.status);
-    return (await res.json()) as any;
+    return ((await res.json()) as { models: LocalModelInfo }).models;
   }
 
   /**
@@ -173,8 +143,8 @@ export class OllamaClient {
    * Uses GET /api/show endpoint.
    */
   async showModel(model: string): Promise<ShowModelInfo> {
-    const result = await this.getResponse("/api/show", { name: model });
-    return result as any;
+    const result = (await this.getResponse<any>("/api/show", { name: model })) as unknown as ShowModelInfo;
+    return result;
   }
 
   /**
@@ -203,8 +173,8 @@ export class OllamaClient {
     source: string,
     destination: string,
   ): Promise<{ status: string }> {
-    const result = await this.getResponse("/api/copy", { source, destination });
-    return result as any;
+    const result = await this.getResponse<{ status: string }>("/api/copy", { source, destination });
+    return (Array.isArray(result) ? result[0] : result) as { status: string };
   }
 
   /**
@@ -212,8 +182,8 @@ export class OllamaClient {
    * Uses DELETE /api/delete endpoint.
    */
   async deleteModel(model: string): Promise<{ status: string }> {
-    const result = await this.getResponse("/api/delete", { name: model });
-    return result as any;
+    const result = await this.getResponse<{ status: string }>("/api/delete", { name: model });
+    return (Array.isArray(result) ? result[0] : result) as { status: string };
   }
 
   /**
@@ -222,8 +192,9 @@ export class OllamaClient {
    */
   async createModel(
     parameters: CreateModelParameters & { stream?: boolean },
-  ): Promise<any> {
-    return this.getResponse("/api/create", parameters);
+    streamParam = false,
+  ): Promise<void | AsyncIterable<void>> {
+    return this.getResponse("/api/create", parameters as unknown as Record<string, unknown>, streamParam);
   }
 
   /**

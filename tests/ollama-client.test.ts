@@ -1,9 +1,6 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import {
-  OllamaClient,
-  OllamaError,
-} from "../src/ollama/implementations/ollama-client.js";
-import type { ChatMessage, ModelTool } from "../src/ollama/types/api-types.js";
+import { OllamaClient } from "../src/llm/implementations/ollama-client.js";
+import type { ChatMessage, ModelTool } from "../src/llm/types/api-types.js";
 
 describe("OllamaClient Qwen Model", async () => {
   let client: OllamaClient;
@@ -27,11 +24,11 @@ describe("OllamaClient Qwen Model", async () => {
     try {
       const chatStream = await client.chat("qwen3.5:35b-better", messages);
       for await (const chatResponse of chatStream) {
-        if (chatResponse.message?.response) {
-          fullResponse += chatResponse.message.response;
+        if ((chatResponse.message as any)?.response) {
+          fullResponse += (chatResponse.message as any).response;
         }
-        if (chatResponse.message?.thinking) {
-          fullResponse += chatResponse.message.thinking;
+        if ((chatResponse.message as any)?.thinking) {
+          fullResponse += (chatResponse.message as any).thinking;
         }
       }
     } catch (err) {
@@ -82,7 +79,7 @@ describe("OllamaClient Qwen Model", async () => {
 
     let hasError = false;
     let toolCallsUsed = false;
-    let toolCallData: any[] = [];
+    let toolCallData: unknown[] = [];
 
     try {
       const chatStream = await client.chat(
@@ -102,6 +99,7 @@ describe("OllamaClient Qwen Model", async () => {
           }
         }
       }
+      expect(toolCallsUsed).toBe(true);
     } catch (err) {
       hasError = true;
       console.error(err);

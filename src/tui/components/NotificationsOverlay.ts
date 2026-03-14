@@ -4,6 +4,7 @@ import {
   createTextAttributes,
 } from "@opentui/core";
 import type { RenderContext, CliRenderer } from "@opentui/core";
+import { COLORS } from "../colors.js";
 
 export type NotificationType = "info" | "success" | "error" | "warning";
 
@@ -18,21 +19,21 @@ export interface NotificationOptions {
   onDismiss?: () => void;
 }
 
-const NOTIFICATION_COLORS: Record<
-  NotificationType,
-  { fg: string; bg: string; icon: string }
-> = {
-  info: { fg: "#8be9fd", bg: "black", icon: "ℹ" },
-  success: { fg: "#50fa7b", bg: "#282a36", icon: "✓" },
-  error: { fg: "#ff5555", bg: "#282a36", icon: "✗" },
-  warning: { fg: "#ffb86c", bg: "#282a36", icon: "⚠" },
-};
-
 /**
  * NotificationsOverlay - Displays stacked toast notifications
  */
 export class NotificationsOverlay extends BoxRenderable {
   private notifications: BoxRenderable[] = [];
+
+  private NOTIFICATION_COLORS: Record<
+    NotificationType,
+    { fg: string; bg: string; icon: string }
+  > = {
+    info: { fg: COLORS.primary, bg: COLORS.background, icon: "ℹ" },
+    success: { fg: COLORS.success, bg: COLORS.surface, icon: "✓" },
+    error: { fg: COLORS.error, bg: COLORS.surface, icon: "✗" },
+    warning: { fg: COLORS.warning, bg: COLORS.surface, icon: "⚠" },
+  };
 
   constructor(
     public renderer: RenderContext,
@@ -43,7 +44,7 @@ export class NotificationsOverlay extends BoxRenderable {
       maxWidth: "80%",
       height: "auto",
       flexDirection: "column",
-      gap: 0,
+      gap: 1,
       position: "absolute",
       right: 1,
       top: options?.position === "bottom" ? undefined : 1,
@@ -57,11 +58,11 @@ export class NotificationsOverlay extends BoxRenderable {
    */
   show(options: NotificationOptions): void {
     const type = options.type || "info";
-    const colors = NOTIFICATION_COLORS[type];
+    const colors = this.NOTIFICATION_COLORS[type];
     const timeout = options.timeout ?? 3000;
     const ctx = (this as any)._ctx as RenderContext;
 
-    // Compact notification 
+    // Compact notification
     const notification = new BoxRenderable(ctx, {
       width: "auto",
       height: "auto",

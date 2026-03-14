@@ -1,5 +1,5 @@
 import { BoxRenderable, TextRenderable, CliRenderer } from "@opentui/core";
-import { COLORS } from "./constants.js";
+import { COLORS } from "./colors.js";
 
 /**
  * Command definition

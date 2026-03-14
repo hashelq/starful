@@ -4,6 +4,7 @@ import {
   createTextAttributes,
 } from "@opentui/core";
 import type { RenderContext, Renderable, CliRenderer } from "@opentui/core";
+import { COLORS } from "../colors.js";
 
 export interface FoldableBoxOptions {
   /** Initial folded state */
@@ -51,7 +52,7 @@ export class FoldableBox extends BoxRenderable {
 
     this._folded = options.folded ?? true;
     this._foldTitle = options.foldTitle ?? "Click to expand";
-    this._foldColor = options.foldColor ?? "#8be9fd";
+    this._foldColor = options.foldColor ?? COLORS.accent;
     this._collapseButton = options.collapseButton ?? "section";
     this._collapseButtonText = options.collapseButtonText ?? "▲ Collapse";
     this._expandOnly = options.expandOnly ?? false;
@@ -94,8 +95,8 @@ export class FoldableBox extends BoxRenderable {
       // Create gray button at bottom
       this._collapseButtonEl = new TextRenderable(ctx, {
         content: this._getButtonText(),
-        fg: "#8b949e",
-        bg: "#30363d",
+        fg: COLORS.textMuted,
+        bg: COLORS.buttonBg,
       });
       super.add(this._collapseButtonEl);
     }

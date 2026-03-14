@@ -16,6 +16,8 @@ interface PywalColors {
 }
 
 interface ThemeColors {
+  background: string;
+  foreground: string;
   base00: string;
   base01: string;
   base02: string;
@@ -49,7 +51,7 @@ function getThemesDir(): string {
   // Get the directory of this file
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
-  return path.join(__dirname);
+  return path.join(__dirname, "themes");
 }
 
 /**
@@ -72,6 +74,8 @@ function loadThemeFromFile(name: string): Theme | null {
     return {
       name,
       colors: {
+        foreground: pywal.special.foreground,
+        background: pywal.special.background,
         base00: colors.color0 || pywal.special.background,
         base01: colors.color1 || colors.color0 || pywal.special.background,
         base02: colors.color2 || colors.color1 || pywal.special.background,

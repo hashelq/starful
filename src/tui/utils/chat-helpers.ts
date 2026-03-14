@@ -1,5 +1,5 @@
 import { MarkdownRenderable, TreeSitterClient, CliRenderer, TextRenderable, BoxRenderable } from "@opentui/core";
-import { getDefaultSyntaxStyle, COLORS } from "../constants.js";
+import { getDefaultSyntaxStyle, COLORS } from "../colors.js";
 
 /**
  * Create a streaming MarkdownRenderable for chat content

@@ -10,6 +10,7 @@ import {
   CliRenderer,
   ASCIIFontRenderable,
   parseKeypress,
+  createTextAttributes,
 } from "@opentui/core";
 // AGENT: Mock Ollama client for testing (replace with real OllamaClient for production)
 import { MockOllamaClient } from "../llm/implementations/mock-ollama-client.js";
@@ -19,7 +20,7 @@ import { createMarkdownRenderable, getFormattedResponse, createThinkingElement, 
 import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
 import { CommandModal } from "./components/CommandModal.js";
 import { createCommandRegistry } from "./commands.js";
-import { COLORS } from "./constants.js";
+import { COLORS, initColors, getDefaultSyntaxStyle } from "./colors.js";
 import { isModalOpen } from "./state.js";
 import { loadConfig } from "./config.js";
 
@@ -39,7 +40,6 @@ interface Message {
 // Global State
 // ============================================================================
 
-let notifications: NotificationsOverlay;
 let dist = (x: number, y: number) => Math.abs(x - y);
 
 // ============================================================================
@@ -61,6 +61,10 @@ async function main() {
 
   // AGENT: Load configuration
   const config = loadConfig();
+
+  // AGENT: Initialize colors based on theme config
+  initColors();
+  console.log(1);
 
   // AGENT: Mock Ollama client instance for testing
   const ollama = new MockOllamaClient({
@@ -95,7 +99,6 @@ async function main() {
       },
     ],
   });
-  //renderer.console.show();
 
   // Implement notifications
   let notifications: NotificationsOverlay;
@@ -168,7 +171,8 @@ async function main() {
     width: "100%",
     height: "auto",
     flexDirection: "column",
-    gap: 0,
+    paddingX: 2,
+    gap: 1,
   });
 
   // AGENT: Figlet ASCII art banner - added to history so it scrolls with chat
@@ -299,7 +303,12 @@ async function main() {
                 treeSitterClient,
                 () => input.focus(),
               );
-              historyContainer.add(codeBlock.renderable);
+              const codeBlockDecorated = new BoxRenderable(renderer, {
+                border: true,
+                borderColor: COLORS.foreground
+              });
+              codeBlockDecorated.add(codeBlock.renderable);
+              historyContainer.add(codeBlockDecorated);
 
               streamingMarkdownContent = codeBlock.expandedMarkdown;
               streamingMarkdownContent2Fold = codeBlock.foldedMarkdown;
@@ -321,7 +330,7 @@ async function main() {
             let n = content.lastIndexOf("\n");
             if (n !== -1) {
               codeLang = content.substring(0, n + 1);
-              languageLabel.content = `Code: ${codeLang}`;
+              languageLabel.content = codeLang;
             }
           }
 
@@ -351,17 +360,51 @@ async function main() {
     role: "user" | "assistant",
     content: string,
   ): TextRenderable {
-    const messageText = new TextRenderable(renderer, {
-      content: content,
-      fg: role === "user" ? COLORS.userText : COLORS.assistantText,
-    });
+    const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    
+    if (role === "user") {
+      // User message: row with content on left, timestamp on right
+      const messageRow = new BoxRenderable(renderer, {
+        width: "100%",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+      });
 
-    historyContainer.add(messageText);
-    messages.push({ role, content, renderable: messageText });
+      const messageText = new TextRenderable(renderer, {
+        content: "> " + content,
+        fg: COLORS.userText,
+        attributes: createTextAttributes({ bold: true }),
+        flexGrow: 1,
+      });
 
-    renderer.requestRender?.();
+      const timestamp = new TextRenderable(renderer, {
+        content: time,
+        fg: COLORS.dimText,
+        attributes: createTextAttributes({ bold: true }),
+      });
 
-    return messageText;
+      messageRow.add(messageText);
+      messageRow.add(timestamp);
+      historyContainer.add(messageRow);
+      messages.push({ role, content, renderable: messageText });
+      
+      renderer.requestRender?.();
+      return messageText;
+    } else {
+      // Assistant message: simple text
+      const messageText = new TextRenderable(renderer, {
+        content: content,
+        fg: COLORS.assistantText,
+      });
+
+      historyContainer.add(messageText);
+      messages.push({ role, content, renderable: messageText });
+
+      renderer.requestRender?.();
+
+      return messageText;
+    }
   }
 
   // AGENT: Input field - user types prompts here, CHANGE event fires on Enter
@@ -409,6 +452,7 @@ async function main() {
     width: "100%",
     height: "100%",
     flexDirection: "column",
+    backgroundColor: COLORS.background,
     padding: 1,
     gap: 1,
   });

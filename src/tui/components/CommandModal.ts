@@ -6,7 +6,7 @@ import {
   createTextAttributes,
   CliRenderer,
 } from "@opentui/core";
-import { COLORS } from "../constants.js";
+import { COLORS } from "../colors.js";
 import type { Command, CommandRegistry } from "../commands.js";
 import { openModal, closeModal } from "../state.js";
 
@@ -55,7 +55,7 @@ export class CommandModal {
     const backgroundLayer = new BoxRenderable(renderer, {
       width: "100%",
       height: "100%",
-      backgroundColor: "#000000",
+      backgroundColor: COLORS.background,
       position: "absolute",
       top: 0,
       left: 0,
@@ -78,7 +78,7 @@ export class CommandModal {
     const shadowBox = new BoxRenderable(renderer, {
       width: 60,
       height: "auto",
-      backgroundColor: "#000000",
+      backgroundColor: COLORS.background,
       padding: 1,
     });
     centerWrapper.add(shadowBox);
@@ -87,7 +87,7 @@ export class CommandModal {
     this._modalBox = new BoxRenderable(renderer, {
       width: "100%",
       height: "auto",
-      backgroundColor: "#1e1e2e", // Catppuccin-like dark
+      backgroundColor: COLORS.surface,
       flexDirection: "column",
       paddingY: 1,
       paddingX: 3,
@@ -99,9 +99,9 @@ export class CommandModal {
     this._searchInput = new InputRenderable(renderer, {
       width: "100%",
       placeholder: "Search commands...",
-      textColor: "#cdd6f4", // Light text
-      placeholderColor: "#6c7086", // Dim placeholder
-      backgroundColor: "#181825", // Dark input bg
+      textColor: COLORS.textInput,
+      placeholderColor: COLORS.textPlaceholder,
+      backgroundColor: COLORS.inputBg,
     });
     // Keyboard handler will trigger fuzzy search with defer
     this._modalBox.add(this._searchInput);
@@ -192,11 +192,11 @@ export class CommandModal {
   private _updateSelection(): void {
     this._commandItems.forEach((item, index) => {
       if (index === this._selectedIndex) {
-        item.bg = "#89b4fa"; // Blue highlight
-        item.fg = "#1e1e2e"; // Dark text
+        item.bg = COLORS.primary;
+        item.fg = COLORS.surface;
       } else {
         item.bg = undefined;
-        item.fg = "#cdd6f4"; // Light text
+        item.fg = COLORS.text;
       }
     });
     this._renderer.requestRender?.();
@@ -218,7 +218,6 @@ export class CommandModal {
         ? `${cmd.name} ${cmd.shortcut}`
         : cmd.name;
       
-      // Catppuccin-inspired colors
       const isSelected = index === this._selectedIndex;
       const item = new TextRenderable(this._renderer, {
         content: displayText,
@@ -226,8 +225,8 @@ export class CommandModal {
         flexGrow: 1,
         flexShrink: 0,
         height: 1,
-        fg: isSelected ? "#1e1e2e" : "#cdd6f4", // Dark text when selected, light otherwise
-        bg: isSelected ? "#89b4fa" : undefined, // Blue highlight when selected
+        fg: isSelected ? COLORS.surface : COLORS.text,
+        bg: isSelected ? COLORS.primary : undefined,
         paddingX: 1,
       });
 

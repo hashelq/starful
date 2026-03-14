@@ -8,7 +8,7 @@ import {
   CliRenderer,
 } from "@opentui/core";
 import { FoldableBox } from "./FoldableBox.js";
-import { COLORS, getDefaultSyntaxStyle } from "../constants.js";
+import { COLORS, getDefaultSyntaxStyle } from "../colors.js";
 
 /**
  * CodeBlock - A collapsible code block component with:
@@ -46,7 +46,7 @@ export class CodeBlock {
       width: "100%",
       height: "auto",
       backgroundColor: COLORS.codeBackground,
-      padding: 1,
+      paddingX: 1,
     });
 
     // Create top bar with language label and copy button
@@ -54,7 +54,7 @@ export class CodeBlock {
 
     // Create markdown renderables for expanded and folded views
     this._expandedMarkdown = this._createMarkdown("auto");
-    this._foldedMarkdown = this._createMarkdown(4);
+    this._foldedMarkdown = this._createMarkdown(8);
 
     // Create FoldableBox with both states
     this._fold = new FoldableBox(renderer, {
@@ -65,12 +65,28 @@ export class CodeBlock {
     // Create folded scroll view (4-line preview)
     const foldedScroll = new ScrollBoxRenderable(renderer, {
       width: "100%",
-      height: 4,
+      height: 8,
       scrollY: true,
       stickyScroll: true,
     });
     foldedScroll.add(this._foldedMarkdown);
-    this._fold.setPlaceholder(foldedScroll);
+
+    const vC = new BoxRenderable(renderer, {
+      flexDirection: "column",
+      gap: 1,
+    });
+
+    const label = new TextRenderable(renderer, {
+      content: "Scroll or click to expand.",
+      attributes: createTextAttributes({bold: true}),
+      flexDirection: "column",
+      fg: COLORS.foreground
+    });
+
+    vC.add(foldedScroll);
+    vC.add(label);
+
+    this._fold.setPlaceholder(vC);
 
     // Set expanded content
     this._fold.setContent(this._expandedMarkdown);

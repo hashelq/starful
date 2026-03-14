@@ -11,6 +11,8 @@ import {
   StyledText,
   CliRenderer,
   createTextAttributes,
+  TabSelectRenderable,
+  ASCIIFontRenderable,
 } from "@opentui/core";
 // AGENT: Mock Ollama client for testing (replace with real OllamaClient for production)
 import { MockOllamaClient } from "../llm/implementations/mock-ollama-client.js";
@@ -63,14 +65,56 @@ const defaultSyntaxStyle = SyntaxStyle.fromTheme([
   { scope: ["namespace"], style: { foreground: "#50fa7b" } },
   { scope: ["constant"], style: { foreground: "#bd93f9" } },
 
-  // ========== Markdown-specific =========
-  { scope: ["markup.heading"], style: { bold: true, foreground: "#f8f8f2" } },
-  { scope: ["markup.bold"], style: { bold: true, foreground: "#fff" } },
-  { scope: ["markup.italic"], style: { italic: true, foreground: "#ff79c6" } },
-  { scope: ["markup.strikethrough"], style: { dim: true } },
-  { scope: ["markup.link"], style: { underline: true, foreground: "#8be9fd" } },
-  { scope: ["markup.uri"], style: { foreground: "#8be9fd" } },
-  { scope: ["markup.quote"], style: { italic: true, foreground: "#bd93f9" } },
+  // ========== Markdown-specific (CLI-friendly) =========
+  // Headers - bold + bright colors for visibility in terminal
+  { scope: ["markup.heading"], style: { bold: true, foreground: "#50fa7b" } }, // Green bold
+  {
+    scope: ["markup.heading.1"],
+    style: { bold: true, foreground: "#ff79c6", underline: true },
+  }, // Pink bold underline
+  { scope: ["markup.heading.2"], style: { bold: true, foreground: "#bd93f9" } }, // Purple bold
+  { scope: ["markup.heading.3"], style: { bold: true, foreground: "#8be9fd" } }, // Cyan bold
+  { scope: ["markup.heading.4"], style: { bold: true, foreground: "#ffb86c" } }, // Orange bold
+  { scope: ["markup.heading.5"], style: { bold: true, foreground: "#f1fa8c" } }, // Yellow bold
+  { scope: ["markup.heading.6"], style: { bold: true, foreground: "#ff5555" } }, // Red bold
+
+  // Text formatting
+  { scope: ["markup.bold"], style: { bold: true, foreground: "#f8f8f2" } }, // White bold
+  { scope: ["markup.italic"], style: { italic: true, foreground: "#f8f8f2" } }, // White italic
+  {
+    scope: ["markup.strikethrough"],
+    style: { dim: true, foreground: "#6272a4" },
+  }, // Gray strikethrough
+  {
+    scope: ["markup.underline"],
+    style: { underline: true, foreground: "#8be9fd" },
+  }, // Cyan underline
+
+  // Links
+  { scope: ["markup.link"], style: { underline: true, foreground: "#8be9fd" } }, // Cyan underline
+  {
+    scope: ["markup.link.url"],
+    style: { foreground: "#79c0ff", underline: true },
+  }, // Blue underline
+  { scope: ["markup.uri"], style: { foreground: "#79c0ff" } }, // Blue
+
+  // Quotes & Lists
+  { scope: ["markup.quote"], style: { italic: true, foreground: "#bd93f9" } }, // Purple italic
+  { scope: ["markup.list"], style: { foreground: "#ff79c6" } }, // Pink
+
+  // Code (inline & fences)
+  {
+    scope: ["markup.raw"],
+    style: { foreground: "#f1fa8c", background: "#44475a" },
+  }, // Yellow bg
+  {
+    scope: ["markup.raw.code-fence"],
+    style: { bold: true, foreground: "#ff79c6" },
+  }, // Pink bold fence
+  {
+    scope: ["markup.raw.inline"],
+    style: { foreground: "#f1fa8c", background: "#282a36" },
+  }, // Yellow on dark
 
   // ========== Code fences (```) =========
   {
@@ -132,6 +176,12 @@ async function main() {
     useMouse: true,
     autoFocus: true,
     exitOnCtrlC: true,
+    prependInputHandlers: [
+      () => {
+        input.focus();
+        return false;
+      },
+    ],
   });
 
   // AGENT: History container - holds all chat messages in a column layout
@@ -142,24 +192,37 @@ async function main() {
     gap: 0,
   });
 
+  // AGENT: Figlet ASCII art banner - added to history so it scrolls with chat
+  const figletBanner = new ASCIIFontRenderable(renderer, {
+    text: "STARFUL",
+    font: "block",
+    color: "#a5d6ff",
+  });
+
+  // AGENT: Title banner - added to history so it scrolls with chat
+  const titleText = new TextRenderable(renderer, {
+    content: "TIP: you can /revert last changes",
+    fg: "#8b949e",
+  });
+
+  // Add to history container so they scroll with messages
+  historyContainer.add(figletBanner);
+  historyContainer.add(titleText);
+
   // AGENT: ScrollBox wraps history container - enables vertical scrolling for long chats
   const scrollBox = new ScrollBoxRenderable(renderer, {
     width: "100%",
-    height: "auto",
+    flexGrow: 1,
     scrollY: true,
+    stickyScroll: true,
   });
+  scrollBox.stickyStart = "bottom";
   scrollBox.add(historyContainer);
-
-  // AGENT: Title banner - displayed at top of TUI
-  const titleText = new TextRenderable(renderer, {
-    content: "🌟 Starful - AI-Powered Terminal IDE",
-    fg: "#a5d6ff",
-  });
 
   // AGENT: Input container - box with border wrapping the text input
   const inputContainer = new BoxRenderable(renderer, {
     width: "100%",
-    padding: 0,
+    paddingX: 2,
   });
 
   // AGENT: Streams LLM response from Ollama - handles both thinking and content phases
@@ -200,9 +263,14 @@ async function main() {
       let content = "";
 
       const chatStream = await ollama.chat(DEFAULT_MODEL, messagesForOllama);
-      let inCode;
+      let inCode: boolean = false;
       let languageLabel: null | TextRenderable = null;
       let codeLang = "";
+
+      let writeMarkDown = (content: string) => {
+        let text = inCode ? `\`\`\`${content}\`\`\`` : content;
+        streamingMarkdownContent!.content = text;
+      };
 
       // Stream the response
       for await (const chunk of chatStream) {
@@ -224,6 +292,7 @@ async function main() {
             "thinking",
           );
           renderer.requestRender();
+          input.focus(); // AGENT: Keep input focused after render
         }
         // Handle content phase
         if (chunk.message.content) {
@@ -244,13 +313,45 @@ async function main() {
           // AGENT: Parse ahead - extract complete code blocks immediately as they arrive
           const codeTagIndex = content.lastIndexOf("```");
           if (codeTagIndex !== -1) {
-            //streamingMarkdownContent!.content = content.substring(
-            //  0,
-            //  codeTagIndex,
-            //);
+            writeMarkDown(content.substring(0, codeTagIndex));
 
             if (!inCode) {
               content = content.substring(codeTagIndex + 3);
+              let topBar = new BoxRenderable(renderer, {
+                width: "100%",
+                flexDirection: "row",
+              });
+              let buttonCopy = new TextRenderable(renderer, {
+                content: " COPY ",
+                paddingRight: 1,
+                bg: "#44475a",
+                fg: "#f8f8f2",
+              });
+              let codeMarkdown: MarkdownRenderable;
+              buttonCopy.onMouseUp = () => {
+                if (codeMarkdown.content) {
+                  // Strip markdown code fences: ```language at start and ``` at end
+                  let code = codeMarkdown.content;
+                  // Remove opening fence with optional language
+                  code = code.replace(/^```\w*\n?/, "");
+                  // Remove closing fence
+                  code = code.replace(/```$/, "");
+                  renderer.copyToClipboardOSC52?.(code);
+                  input.focus();
+                  buttonCopy.content = " COPIED! ";
+                  renderer.requestRender?.();
+                  setTimeout(() => {
+                    buttonCopy.content = " COPY ";
+                    renderer.requestRender?.();
+                  }, 1500);
+                }
+              };
+              let rightBar = new BoxRenderable(renderer, {
+                alignItems: "flex-end",
+                flexGrow: 1,
+              });
+              rightBar.add(buttonCopy);
+
               languageLabel = new TextRenderable(renderer, {
                 content: "",
                 fg: "lime",
@@ -267,7 +368,7 @@ async function main() {
               });
 
               // AGENT: Markdown renderable for the code block
-              const codeMarkdown = new MarkdownRenderable(renderer, {
+              codeMarkdown = new MarkdownRenderable(renderer, {
                 width: "100%",
                 height: "auto",
                 content: "",
@@ -277,13 +378,16 @@ async function main() {
                 treeSitterClient,
               });
 
-              codeBox.add(languageLabel);
+              topBar.add(languageLabel);
+              topBar.add(rightBar);
+              codeBox.add(topBar);
               codeBox.add(codeMarkdown);
               historyContainer.add(codeBox);
 
               streamingMarkdownContent = codeMarkdown;
             } else {
               content = content.substring(codeTagIndex + 3);
+
               streamingMarkdownContent = createMD(renderer, treeSitterClient);
 
               historyContainer.add(streamingMarkdownContent);
@@ -292,26 +396,20 @@ async function main() {
             inCode = !inCode;
           }
 
+          // AGENT: This is a language detection with a language label on top.
           if (inCode && codeLang === "" && languageLabel) {
             let n = content.lastIndexOf("\n");
             if (n !== -1) {
               codeLang = content.substring(0, n + 1);
-              languageLabel.content = codeLang;
+              languageLabel.content = `Code: ${codeLang}`;
             }
           }
 
-          let text = inCode ? `\`\`\`${content}\n\`\`\`` : content;
-          streamingMarkdownContent!.content = text;
-          renderer.requestRender();
+          writeMarkDown(content);
         }
 
-        // Auto-scroll to bottom on each chunk
-        if ((scrollBox as any).viewport && !assistantMessageAdded) {
-          (scrollBox as any).scrollTop = Math.max(
-            0,
-            (historyContainer as any).scrollHeight ?? 100,
-          );
-        }
+        input.focus(); // AGENT: Keep input focused after render
+        renderer.requestRender();
 
         if (chunk.done) {
           break;
@@ -352,9 +450,8 @@ async function main() {
     placeholder: "> Ask me anything...",
     textColor: "#f0f6fc",
     placeholderColor: "#30363d",
-    onSubmit: () => {},
   });
-  input.on(InputRenderableEvents.CHANGE, async (val) => {
+  input.on(InputRenderableEvents.ENTER, async (val) => {
     const value = val.trim();
 
     if (value && !isGenerating) {
@@ -386,20 +483,20 @@ async function main() {
 
   // Add input to container
   inputContainer.add(input);
-  scrollBox.add(inputContainer);
 
   // AGENT: Main container - root layout with flexbox column (title → scrollbox → input)
   const mainContainer = new BoxRenderable(renderer, {
     width: "100%",
     height: "100%",
     flexDirection: "column",
-    padding: 0,
-    gap: 0,
+    padding: 1,
+    gap: 1,
   });
 
-  // Add all children to main container in order: title -> scroll/history -> input
-  mainContainer.add(titleText);
+  // Add all children to main container in order: figlet -> title -> scroll/history -> input
+  // AGENT: Add scrollable area and input to main container
   mainContainer.add(scrollBox);
+  mainContainer.add(inputContainer);
 
   // AGENT: Mount main container to renderer's root (root is readonly, use .add())
   renderer.root.add(mainContainer);

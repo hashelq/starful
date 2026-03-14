@@ -9,6 +9,7 @@ import {
 } from "@opentui/core";
 import { COLORS } from "../constants.js";
 import type { Command, CommandRegistry } from "../commands.js";
+import { openModal, closeModal } from "../state.js";
 
 /**
  * CommandModal - A modal dialog for executing commands
@@ -246,6 +247,7 @@ export class CommandModal {
     this._selectedIndex = 0;
     this._renderCommands();
     this._searchInput.focus();
+    openModal();
     this._renderer.requestRender?.();
   }
 
@@ -255,6 +257,7 @@ export class CommandModal {
   close(): void {
     this._visible = false;
     this._overlay.visible = false;
+    closeModal();
     this._onClose();
     this._renderer.requestRender?.();
   }

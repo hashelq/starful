@@ -20,6 +20,7 @@ import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
 import { CommandModal } from "./components/CommandModal.js";
 import { createCommandRegistry } from "./commands.js";
 import { DEFAULT_MODEL, COLORS } from "./constants.js";
+import { isModalOpen } from "./state.js";
 
 // ============================================================================
 // Types
@@ -82,13 +83,15 @@ async function main() {
           return true; // Stop propagation
         }
         
-        // Always focus input for other keys
-        input.focus();
+        // Only focus input if no modals are open
+        if (!isModalOpen()) {
+          input.focus();
+        }
         return false;
       },
     ],
   });
-  renderer.console.show();
+  //renderer.console.show();
 
   // Implement notifications
   let notifications: NotificationsOverlay;

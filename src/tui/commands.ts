@@ -33,17 +33,61 @@ export class CommandRegistry {
   }
 
   /**
-   * Search commands by name (fuzzy search)
+   * Fuzzy search commands - finds partial matches in order
+   * Returns sorted by match quality (exact > starts with > contains)
    */
   search(query: string): Command[] {
     if (!query) return this.getAll();
     
     const lowerQuery = query.toLowerCase();
-    return this.getAll().filter(cmd => 
-      cmd.name.toLowerCase().includes(lowerQuery) ||
-      cmd.description.toLowerCase().includes(lowerQuery) ||
-      cmd.id.toLowerCase().includes(lowerQuery)
-    );
+    const allCommands = this.getAll();
+    
+    // Score each command by match quality
+    const scored = allCommands.map(cmd => {
+      const name = cmd.name.toLowerCase();
+      const desc = cmd.description.toLowerCase();
+      const id = cmd.id.toLowerCase();
+      
+      let score = 0;
+      
+      // Exact match
+      if (name === lowerQuery || id === lowerQuery) {
+        score = 100;
+      }
+      // Starts with query
+      else if (name.startsWith(lowerQuery)) {
+        score = 80;
+      }
+      // ID starts with
+      else if (id.startsWith(lowerQuery)) {
+        score = 70;
+      }
+      // Contains
+      else if (name.includes(lowerQuery)) {
+        score = 50;
+      }
+      else if (id.includes(lowerQuery)) {
+        score = 40;
+      }
+      else if (desc.includes(lowerQuery)) {
+        score = 20;
+      }
+      // Fuzzy match - each character must be found in order
+      else if (_fuzzyMatch(name, lowerQuery)) {
+        score = 30;
+      }
+      else if (_fuzzyMatch(id, lowerQuery)) {
+        score = 25;
+      }
+      
+      return { cmd, score };
+    });
+    
+    // Filter out non-matches and sort by score descending
+    return scored
+      .filter(s => s.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(s => s.cmd);
   }
 
   /**
@@ -52,6 +96,20 @@ export class CommandRegistry {
   get(id: string): Command | undefined {
     return this.commands.get(id);
   }
+}
+
+/**
+ * Fuzzy match - checks if all characters of query appear in order in text
+ */
+function _fuzzyMatch(text: string, query: string): boolean {
+  let textIndex = 0;
+  for (let i = 0; i < query.length; i++) {
+    const char = query[i] ?? '';
+    const found = text.indexOf(char, textIndex);
+    if (found === -1) return false;
+    textIndex = found + 1;
+  }
+  return true;
 }
 
 /**

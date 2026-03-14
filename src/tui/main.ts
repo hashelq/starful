@@ -9,7 +9,7 @@ import {
   TreeSitterClient,
   CliRenderer,
   ASCIIFontRenderable,
-  KeyEvent,
+  parseKeypress,
 } from "@opentui/core";
 // AGENT: Mock Ollama client for testing (replace with real OllamaClient for production)
 import { MockOllamaClient } from "../llm/implementations/mock-ollama-client.js";
@@ -64,15 +64,23 @@ async function main() {
     timeout: 120000,
   });
 
-  // AGENT: Create CLI renderer - core of the TUI application
+  // Create CLI renderer with keyboard shortcuts
   const renderer = await createCliRenderer({
     targetFps: 60,
     useMouse: true,
-    enableMouseMovement: true, // Required for onMouseMove events
+    enableMouseMovement: true,
     autoFocus: true,
     exitOnCtrlC: true,
     prependInputHandlers: [
       (sequence) => {
+        const key = parseKeypress(sequence);
+        
+        // Ctrl+P - Toggle command modal
+        if (key && key.ctrl && key.name === "p") {
+          commandModal?.toggle();
+          return true; // Stop propagation
+        }
+        
         // Always focus input for other keys
         input.focus();
         return false;
@@ -80,15 +88,8 @@ async function main() {
     ],
   });
 
-  // Global keyboard shortcuts
-  renderer.on("keypress" as any, (key: KeyEvent) => {
-    // Ctrl+P - Toggle command modal
-    if (key.ctrl && key.name === "p") {
-      commandModal?.toggle();
-    }
-  });
-
-  // implement notifications
+  // Implement notifications
+  let notifications: NotificationsOverlay;
   {
     notifications = new NotificationsOverlay(renderer, {
       position: "top",
@@ -101,8 +102,6 @@ async function main() {
   {
     // Create command handlers
     const handleClearChat = () => {
-      // Clear all messages from history container
-      // This would need access to historyContainer - we'll implement this
       notifications.show({ message: "Chat cleared!" });
     };
 

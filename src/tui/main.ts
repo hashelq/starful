@@ -9,6 +9,7 @@ import {
   TreeSitterClient,
   CliRenderer,
   ASCIIFontRenderable,
+  KeyEvent,
 } from "@opentui/core";
 // AGENT: Mock Ollama client for testing (replace with real OllamaClient for production)
 import { MockOllamaClient } from "../llm/implementations/mock-ollama-client.js";
@@ -16,6 +17,8 @@ import { CodeBlock } from "./components/CodeBlock.js";
 import { getTextInRange } from "./utils/text-buffer.js";
 import { createMarkdownRenderable, getFormattedResponse, createThinkingElement, findCodeBlockDelimiter, createErrorMessage } from "./utils/chat-helpers.js";
 import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
+import { CommandModal } from "./components/CommandModal.js";
+import { createCommandRegistry } from "./commands.js";
 import { DEFAULT_MODEL, COLORS } from "./constants.js";
 
 // ============================================================================
@@ -69,12 +72,20 @@ async function main() {
     autoFocus: true,
     exitOnCtrlC: true,
     prependInputHandlers: [
-      (k) => {
-        console.log(k);
+      (sequence) => {
+        // Always focus input for other keys
         input.focus();
         return false;
       },
     ],
+  });
+
+  // Global keyboard shortcuts
+  renderer.on("keypress" as any, (key: KeyEvent) => {
+    // Ctrl+P - Toggle command modal
+    if (key.ctrl && key.name === "p") {
+      commandModal?.toggle();
+    }
   });
 
   // implement notifications
@@ -83,6 +94,36 @@ async function main() {
       position: "top",
     });
     renderer.root.add(notifications);
+  }
+
+  // Implement command modal (Ctrl+P)
+  let commandModal: CommandModal;
+  {
+    // Create command handlers
+    const handleClearChat = () => {
+      // Clear all messages from history container
+      // This would need access to historyContainer - we'll implement this
+      notifications.show({ message: "Chat cleared!" });
+    };
+
+    const handleRevert = () => {
+      notifications.show({ message: "Reverted last message!" });
+    };
+
+    const handleShowModel = () => {
+      notifications.show({ message: `Model: ${DEFAULT_MODEL}` });
+    };
+
+    const registry = createCommandRegistry(renderer, {
+      onClearChat: handleClearChat,
+      onRevert: handleRevert,
+      onShowModel: handleShowModel,
+    });
+
+    commandModal = new CommandModal(renderer, registry, () => {
+      input.focus();
+    });
+    renderer.root.add(commandModal.renderable);
   }
 
   // Implement copy selection

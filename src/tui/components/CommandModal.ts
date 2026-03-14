@@ -3,7 +3,6 @@ import {
   TextRenderable,
   InputRenderable,
   ScrollBoxRenderable,
-  InputRenderableEvents,
   createTextAttributes,
   CliRenderer,
 } from "@opentui/core";
@@ -101,9 +100,7 @@ export class CommandModal {
       placeholderColor: "#6c7086", // Dim placeholder
       backgroundColor: "#181825", // Dark input bg
     });
-    this._searchInput.on(InputRenderableEvents.CHANGE, (value) => {
-      this._filterCommands(value);
-    });
+    // Keyboard handler will trigger fuzzy search with defer
     this._modalBox.add(this._searchInput);
 
     // Create commands container (scrollable)
@@ -157,7 +154,13 @@ export class CommandModal {
         return true;
       }
       
-      // Allow default input behavior for other keys
+      // Allow default input behavior for character keys
+      // and defer fuzzy search
+      setTimeout(() => {
+        const query = this._searchInput.value;
+        this._filterCommands(query);
+      }, 0);
+      
       return false;
     };
   }

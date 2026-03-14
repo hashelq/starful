@@ -8,7 +8,7 @@ import {
   CliRenderer,
 } from "@opentui/core";
 import { FoldableBox } from "./FoldableBox.js";
-import { COLORS, defaultSyntaxStyle } from "../constants.js";
+import { COLORS, getDefaultSyntaxStyle } from "../constants.js";
 
 /**
  * CodeBlock - A collapsible code block component with:
@@ -129,7 +129,7 @@ export class CodeBlock {
       width: "100%",
       height: height,
       content: "",
-      syntaxStyle: defaultSyntaxStyle,
+      syntaxStyle: getDefaultSyntaxStyle(),
       streaming: false,
       conceal: true,
       treeSitterClient: this._treeSitterClient,

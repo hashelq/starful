@@ -14,7 +14,7 @@ import {
 import { MockOllamaClient } from "../llm/implementations/mock-ollama-client.js";
 import { CodeBlock } from "./components/CodeBlock.js";
 import { getTextInRange } from "./utils/text-buffer.js";
-import { createMarkdownRenderable, getFormattedResponse } from "./utils/chat-helpers.js";
+import { createMarkdownRenderable, getFormattedResponse, createThinkingElement, findCodeBlockDelimiter, createErrorMessage } from "./utils/chat-helpers.js";
 import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
 import { DEFAULT_MODEL, COLORS, defaultSyntaxStyle } from "./constants.js";
 
@@ -212,13 +212,7 @@ async function main() {
         if (chunk.message.thinking) {
           if (!thinkingStarted) {
             thinkingStarted = true;
-            streamingThinkingElement = new TextRenderable(renderer, {
-              width: "100%",
-              height: "auto",
-              content: "",
-              fg: "gray",
-            });
-            historyContainer.add(streamingThinkingElement);
+            streamingThinkingElement = createThinkingElement(renderer, historyContainer);
           }
           thinking += chunk.message.thinking;
           streamingThinkingElement!.content = getFormattedResponse(
@@ -245,7 +239,7 @@ async function main() {
           content += chunk.message.content;
 
           // AGENT: Parse ahead - extract complete code blocks immediately as they arrive
-          const codeTagIndex = content.lastIndexOf("```");
+          const codeTagIndex = findCodeBlockDelimiter(content);
           if (codeTagIndex !== -1) {
             writeMarkDown(content.substring(0, codeTagIndex));
 
@@ -295,10 +289,10 @@ async function main() {
         }
       }
     } catch (error) {
-      const errorMsg = new TextRenderable(renderer, {
-        content: `Error: ${error instanceof Error ? error.message : "Failed to connect to Ollama. Make sure it's running on localhost:11434"}`,
-        fg: COLORS.error, // Red for errors
-      });
+      const errorMsg = createErrorMessage(
+        renderer,
+        `Error: ${error instanceof Error ? error.message : "Failed to connect to Ollama. Make sure it's running on localhost:11434"}`,
+      );
       historyContainer.add(errorMsg);
     } finally {
       isGenerating = false;

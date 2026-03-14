@@ -42,6 +42,7 @@ function ensureConfigDir(): void {
 
 /**
  * Load configuration from file or return defaults
+ * Creates config file with defaults on first run
  */
 export function loadConfig(): Config {
   const configPath = getConfigPath();
@@ -56,6 +57,8 @@ export function loadConfig(): Config {
     console.warn("Failed to load config, using defaults:", error);
   }
   
+  // First run - save default config
+  saveConfig(DEFAULT_CONFIG);
   return { ...DEFAULT_CONFIG };
 }
 

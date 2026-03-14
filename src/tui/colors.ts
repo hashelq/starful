@@ -85,7 +85,7 @@ function buildPalette(theme: Theme): ColorPalette {
     surface: c.base01,
     surfaceAlt: c.base02,
     inputBg: c.base02,
-    codeBackground: c.base00,
+    codeBackground: c.background,
 
     // Text
     text: c.foreground,

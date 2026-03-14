@@ -8,12 +8,11 @@ import {
   MarkdownRenderable,
   TreeSitterClient,
   CliRenderer,
-  createTextAttributes,
   ASCIIFontRenderable,
 } from "@opentui/core";
 // AGENT: Mock Ollama client for testing (replace with real OllamaClient for production)
 import { MockOllamaClient } from "../llm/implementations/mock-ollama-client.js";
-import { FoldableBox } from "./components/FoldableBox.js";
+import { CodeBlock } from "./components/CodeBlock.js";
 import { getTextInRange } from "./utils/text-buffer.js";
 import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
 import { DEFAULT_MODEL, COLORS, defaultSyntaxStyle } from "./constants.js";
@@ -265,101 +264,18 @@ async function main() {
 
             if (!inCode) {
               content = content.substring(codeTagIndex + 3);
-              let topBar = new BoxRenderable(renderer, {
-                width: "100%",
-                flexDirection: "row",
-              });
-              let buttonCopy = new TextRenderable(renderer, {
-                content: " COPY ",
-                paddingRight: 1,
-                bg: COLORS.copyButtonBg,
-                fg: COLORS.copyButtonText,
-              });
-              let codeMarkdown: MarkdownRenderable;
-              buttonCopy.onMouseUp = () => {
-                if (codeMarkdown.content) {
-                  // Strip markdown code fences: ```language at start and ``` at end
-                  let code = codeMarkdown.content;
-                  // Remove opening fence with optional language
-                  code = code.replace(/^```\w*\n?/, "");
-                  // Remove closing fence
-                  code = code.replace(/```$/, "");
-                  renderer.copyToClipboardOSC52?.(code);
-                  input.focus();
-                  buttonCopy.content = " COPIED! ";
-                  renderer.requestRender?.();
-                  setTimeout(() => {
-                    buttonCopy.content = " COPY ";
-                    renderer.requestRender?.();
-                  }, 1500);
-                }
-              };
-              let rightBar = new BoxRenderable(renderer, {
-                alignItems: "flex-end",
-                flexGrow: 1,
-              });
-              rightBar.add(buttonCopy);
 
-              languageLabel = new TextRenderable(renderer, {
-                content: "",
-                fg: COLORS.languageLabel,
-                attributes: createTextAttributes({ bold: true }),
-              });
-              codeLang = "";
-
-              // AGENT: Create Box with gray bg for code block - IMMEDIATELY when detected
-              const codeBox = new BoxRenderable(renderer, {
-                width: "100%",
-                height: "auto",
-                backgroundColor: COLORS.codeBackground,
-                padding: 1,
-              });
-
-              // AGENT: Markdown renderable for the code block
-              codeMarkdown = new MarkdownRenderable(renderer, {
-                width: "100%",
-                height: "auto",
-                content: "",
-                syntaxStyle: defaultSyntaxStyle,
-                streaming: false,
-                conceal: true,
+              // Create CodeBlock component
+              const codeBlock = new CodeBlock(
+                renderer,
                 treeSitterClient,
-              });
+                () => input.focus(),
+              );
+              historyContainer.add(codeBlock.renderable);
 
-              streamingMarkdownContent2Fold = new MarkdownRenderable(renderer, {
-                width: "100%",
-                height: "auto",
-                content: "",
-                syntaxStyle: defaultSyntaxStyle,
-                streaming: false,
-                conceal: true,
-                treeSitterClient,
-              });
-
-              topBar.add(languageLabel);
-              topBar.add(rightBar);
-              codeBox.add(topBar);
-              let fold = new FoldableBox(renderer, { 
-                foldTitle: "code",
-                expandOnly: true 
-              });
-              fold.setContent(codeMarkdown);
-
-              // implement folded view
-              {
-                let foldedScroll = new ScrollBoxRenderable(renderer, {
-                  width: "100%",
-                  height: 4,
-                  scrollY: true,
-                  stickyScroll: true,
-                });
-                foldedScroll.add(streamingMarkdownContent2Fold);
-                fold.setPlaceholder(foldedScroll);
-              }
-              codeBox.add(fold);
-              historyContainer.add(codeBox);
-
-              streamingMarkdownContent = codeMarkdown;
+              streamingMarkdownContent = codeBlock.expandedMarkdown;
+              streamingMarkdownContent2Fold = codeBlock.foldedMarkdown;
+              languageLabel = codeBlock.languageLabel;
             } else {
               content = content.substring(codeTagIndex + 3);
 

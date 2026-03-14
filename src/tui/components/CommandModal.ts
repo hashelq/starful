@@ -56,6 +56,7 @@ export class CommandModal {
       width: "100%",
       height: "100%",
       backgroundColor: COLORS.background,
+      opacity: 0.5,
       position: "absolute",
       top: 0,
       left: 0,
@@ -87,7 +88,8 @@ export class CommandModal {
     this._modalBox = new BoxRenderable(renderer, {
       width: "100%",
       height: "auto",
-      backgroundColor: COLORS.surface,
+      backgroundColor: COLORS.background,
+      border: true,
       flexDirection: "column",
       paddingY: 1,
       paddingX: 3,
@@ -100,8 +102,7 @@ export class CommandModal {
       width: "100%",
       placeholder: "Search commands...",
       textColor: COLORS.textInput,
-      placeholderColor: COLORS.textPlaceholder,
-      backgroundColor: COLORS.inputBg,
+      attributes: createTextAttributes({bold: true})
     });
     // Keyboard handler will trigger fuzzy search with defer
     this._modalBox.add(this._searchInput);
@@ -192,8 +193,8 @@ export class CommandModal {
   private _updateSelection(): void {
     this._commandItems.forEach((item, index) => {
       if (index === this._selectedIndex) {
-        item.bg = COLORS.primary;
-        item.fg = COLORS.surface;
+        item.bg = COLORS.foreground;
+        item.fg = COLORS.background;
       } else {
         item.bg = undefined;
         item.fg = COLORS.text;
@@ -225,8 +226,8 @@ export class CommandModal {
         flexGrow: 1,
         flexShrink: 0,
         height: 1,
-        fg: isSelected ? COLORS.surface : COLORS.text,
-        bg: isSelected ? COLORS.primary : undefined,
+        fg: isSelected ? COLORS.background : COLORS.text,
+        bg: isSelected ? COLORS.foreground : undefined,
         paddingX: 1,
       });
 

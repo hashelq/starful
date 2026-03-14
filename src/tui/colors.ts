@@ -91,7 +91,7 @@ function buildPalette(theme: Theme): ColorPalette {
     text: c.foreground,
     textDim: c.base03,
     textMuted: c.base04,
-    textInput: c.base05,
+    textInput: c.foreground,
     textPlaceholder: c.base03,
 
     // User/Assistant text colors

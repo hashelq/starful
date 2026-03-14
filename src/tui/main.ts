@@ -134,7 +134,6 @@ async function main() {
     commandModal = new CommandModal(renderer, registry, () => {
       input.focus();
     });
-    renderer.root.add(commandModal.renderable);
   }
 
   // Implement copy selection
@@ -464,6 +463,9 @@ async function main() {
 
   // AGENT: Mount main container to renderer's root (root is readonly, use .add())
   renderer.root.add(mainContainer);
+
+  // AGENT: Add command modal LAST so it appears on top
+  renderer.root.add(commandModal.renderable);
 
   // AGENT: Start render loop - blocks until process exits
   renderer.auto();

@@ -9,9 +9,11 @@ import {
   SyntaxStyle,
   TreeSitterClient,
   StyledText,
+  CliRenderer,
+  createTextAttributes,
 } from "@opentui/core";
-// AGENT: Ollama client for streaming LLM responses
-import { OllamaClient } from "../llm/implementations/ollama-client.js";
+// AGENT: Mock Ollama client for testing (replace with real OllamaClient for production)
+import { MockOllamaClient } from "../llm/implementations/mock-ollama-client.js";
 
 // AGENT: Message interface for chat history - tracks role, content, and renderable reference
 interface Message {
@@ -69,7 +71,26 @@ const defaultSyntaxStyle = SyntaxStyle.fromTheme([
   { scope: ["markup.link"], style: { underline: true, foreground: "#8be9fd" } },
   { scope: ["markup.uri"], style: { foreground: "#8be9fd" } },
   { scope: ["markup.quote"], style: { italic: true, foreground: "#bd93f9" } },
+
+  // ========== Code fences (```) =========
+  {
+    scope: ["markup.raw.code-fence"],
+    style: { bold: true, foreground: "#ff5555" },
+  },
+  { scope: ["markup.raw"], style: { foreground: "#f1fa8c" } },
 ]);
+
+function createMD(renderer: CliRenderer, treeSitterClient: TreeSitterClient) {
+  return new MarkdownRenderable(renderer, {
+    width: "100%",
+    height: "auto",
+    content: "",
+    syntaxStyle: defaultSyntaxStyle,
+    streaming: true,
+    conceal: true,
+    treeSitterClient,
+  });
+}
 
 // AGENT: Placeholder function - can be extended to format thinking vs content differently
 function getFormattedResponse(data: string, t: "content" | "thinking"): string {
@@ -97,9 +118,9 @@ async function main() {
   // AGENT: App state - message history and generation lock
   const messages: Message[] = [];
   let isGenerating = false;
-  
-  // AGENT: Ollama client instance for LLM communication
-  const ollama = new OllamaClient({
+
+  // AGENT: Mock Ollama client instance for testing
+  const ollama = new MockOllamaClient({
     host: "localhost",
     port: 11434,
     timeout: 120000,
@@ -139,9 +160,6 @@ async function main() {
   const inputContainer = new BoxRenderable(renderer, {
     width: "100%",
     padding: 0,
-    borderColor: "#3ea0ff",
-    borderStyle: "rounded",
-    border: true,
   });
 
   // AGENT: Streams LLM response from Ollama - handles both thinking and content phases
@@ -182,6 +200,9 @@ async function main() {
       let content = "";
 
       const chatStream = await ollama.chat(DEFAULT_MODEL, messagesForOllama);
+      let inCode;
+      let languageLabel: null | TextRenderable = null;
+      let codeLang = "";
 
       // Stream the response
       for await (const chunk of chatStream) {
@@ -208,25 +229,79 @@ async function main() {
         if (chunk.message.content) {
           if (!contentStarted) {
             contentStarted = true;
-            streamingMarkdownContent = new MarkdownRenderable(renderer, {
-              width: "100%",
-              height: "auto",
-              content: "",
-              syntaxStyle: defaultSyntaxStyle, // Required - styling for code blocks
-              streaming: true, // Enable streaming mode
-              conceal: true,
-              treeSitterClient, // Enable Tree-sitter based syntax highlighting
-            });
+
+            // AGENT: Main content markdown (without code blocks - they get extracted)
+            streamingMarkdownContent = createMD(renderer, treeSitterClient);
+
             historyContainer.add(streamingMarkdownContent);
+
             if (thinkingStarted) {
               fullResponse += "\n";
             }
           }
           content += chunk.message.content;
-          streamingMarkdownContent!.content = getFormattedResponse(
-            content,
-            "content",
-          );
+
+          // AGENT: Parse ahead - extract complete code blocks immediately as they arrive
+          const codeTagIndex = content.lastIndexOf("```");
+          if (codeTagIndex !== -1) {
+            //streamingMarkdownContent!.content = content.substring(
+            //  0,
+            //  codeTagIndex,
+            //);
+
+            if (!inCode) {
+              content = content.substring(codeTagIndex + 3);
+              languageLabel = new TextRenderable(renderer, {
+                content: "",
+                fg: "lime",
+                attributes: createTextAttributes({ bold: true }),
+              });
+              codeLang = "";
+
+              // AGENT: Create Box with gray bg for code block - IMMEDIATELY when detected
+              const codeBox = new BoxRenderable(renderer, {
+                width: "100%",
+                height: "auto",
+                backgroundColor: "#1e1e1e",
+                padding: 1,
+              });
+
+              // AGENT: Markdown renderable for the code block
+              const codeMarkdown = new MarkdownRenderable(renderer, {
+                width: "100%",
+                height: "auto",
+                content: "",
+                syntaxStyle: defaultSyntaxStyle,
+                streaming: false,
+                conceal: true,
+                treeSitterClient,
+              });
+
+              codeBox.add(languageLabel);
+              codeBox.add(codeMarkdown);
+              historyContainer.add(codeBox);
+
+              streamingMarkdownContent = codeMarkdown;
+            } else {
+              content = content.substring(codeTagIndex + 3);
+              streamingMarkdownContent = createMD(renderer, treeSitterClient);
+
+              historyContainer.add(streamingMarkdownContent);
+            }
+
+            inCode = !inCode;
+          }
+
+          if (inCode && codeLang === "" && languageLabel) {
+            let n = content.lastIndexOf("\n");
+            if (n !== -1) {
+              codeLang = content.substring(0, n + 1);
+              languageLabel.content = codeLang;
+            }
+          }
+
+          let text = inCode ? `\`\`\`${content}\n\`\`\`` : content;
+          streamingMarkdownContent!.content = text;
           renderer.requestRender();
         }
 
@@ -311,6 +386,7 @@ async function main() {
 
   // Add input to container
   inputContainer.add(input);
+  scrollBox.add(inputContainer);
 
   // AGENT: Main container - root layout with flexbox column (title → scrollbox → input)
   const mainContainer = new BoxRenderable(renderer, {
@@ -324,7 +400,6 @@ async function main() {
   // Add all children to main container in order: title -> scroll/history -> input
   mainContainer.add(titleText);
   mainContainer.add(scrollBox);
-  mainContainer.add(inputContainer);
 
   // AGENT: Mount main container to renderer's root (root is readonly, use .add())
   renderer.root.add(mainContainer);

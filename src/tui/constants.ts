@@ -1,28 +1,68 @@
 import { SyntaxStyle } from "@opentui/core";
-import { getTheme, mapThemeToUIColors, THEMES, type ThemeName } from "./themes.js";
+import { getTheme, getThemeNames, type Theme } from "./themes.js";
 import { getTheme as getUITheme } from "./ui-config.js";
 
 /**
  * Get current theme from UI config, default to catppuccin
  */
-function getCurrentTheme() {
+function getCurrentTheme(): Theme {
   const themeName = getUITheme() || "catppuccin";
-  return getTheme(themeName as ThemeName);
+  return getTheme(themeName);
 }
 
 /**
- * Get UIColors for current theme
+ * Map theme colors to UI color aliases
  */
-export function getColors() {
+function getColors() {
   const theme = getCurrentTheme();
-  return mapThemeToUIColors(theme);
+  const c = theme.colors;
+  
+  return {
+    // Backgrounds
+    background: c.base00,
+    surface: c.base01,
+    surfaceAlt: c.base02,
+    inputBg: c.base02,
+    codeBackground: c.base00,
+    
+    // Text
+    text: c.base05,
+    textDim: c.base03,
+    textMuted: c.base04,
+    textInput: c.base05,
+    textPlaceholder: c.base03,
+    
+    // Accents
+    primary: c.base0d,
+    secondary: c.base0e,
+    accent: c.base0c,
+    success: c.base0b,
+    warning: c.base09,
+    error: c.base08,
+    
+    // UI Elements
+    border: c.base02,
+    buttonBg: c.base02,
+    buttonText: c.base05,
+    
+    // Syntax (mapped to theme colors)
+    keyword: c.base0e,
+    string: c.base0a,
+    number: c.base0d,
+    type: c.base0c,
+    function: c.base0b,
+    comment: c.base03,
+    operator: c.base05,
+    constant: c.base0d,
+    variable: c.base09,
+  };
 }
 
 /**
  * Get theme names for config
  */
 export function getAvailableThemes(): string[] {
-  return Object.keys(THEMES);
+  return getThemeNames();
 }
 
 /**

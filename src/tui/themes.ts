@@ -1,161 +1,162 @@
 /**
- * Base16 color schemes
- * Each scheme has 16 colors: 8 base + 8 bright variants
+ * Theme loading from JSON files
  */
 
-// Dracula color scheme (base16)
-export const dracula = {
-  name: "dracula",
-  colors: {
-    // Base colors (0-7)
-    base00: "#282a36", // Default background
-    base01: "#383a59", // Lighter background (status bar, etc)
-    base02: "#44475a", // Selection background
-    base03: "#6272a4", // Comments, secondary text
-    base04: "#8b949e", // Dark foreground
-    base05: "#f8f8f2", // Default foreground
-    base06: "#e6e6e6", // Light foreground
-    base07: "#ffffff", // Bright foreground
-    
-    // Bright colors (8-15)
-    base08: "#ff5555", // Red
-    base09: "#ffb86c", // Orange
-    base0a: "#f1fa8c", // Yellow
-    base0b: "#50fa7b", // Green
-    base0c: "#8be9fd", // Cyan
-    base0d: "#bd93f9", // Purple
-    base0e: "#ff79c6", // Pink
-    base0f: "#f8f8f2", // Bright white
-  },
-};
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-// Catppuccin Mocha
-export const catppuccin = {
-  name: "catppuccin",
-  colors: {
-    base00: "#1e1e2e", // Default background (Catppuccin surface0)
-    base01: "#181825",  // Darker (surface1)
-    base02: "#313244",  // (surface2)
-    base03: "#6c7086",  // Comments (overlay0)
-    base04: "#7f849e",  // (overlay1)
-    base05: "#cdd6f4",  // Default foreground (text)
-    base06: "#e6e9ef",  // (subtext1)
-    base07: "#ffffff",   // (subtext0)
-    
-    // Bright
-    base08: "#f38ba8", // Red
-    base09: "#fab387", // Peach/Orange
-    base0a: "#f9e2af", // Yellow
-    base0b: "#a6e3a1", // Green
-    base0c: "#89dceb", // Sky
-    base0d: "#89b4fa", // Blue
-    base0e: "#f5c2e7", // Mauve/Pink
-    base0f: "#eba0ac", // Flamingo
-  },
-};
+interface PywalColors {
+  special: {
+    background: string;
+    foreground: string;
+    cursor: string;
+  };
+  colors: Record<string, string>;
+}
+
+interface ThemeColors {
+  base00: string;
+  base01: string;
+  base02: string;
+  base03: string;
+  base04: string;
+  base05: string;
+  base06: string;
+  base07: string;
+  base08: string;
+  base09: string;
+  base0a: string;
+  base0b: string;
+  base0c: string;
+  base0d: string;
+  base0e: string;
+  base0f: string;
+}
+
+export interface Theme {
+  name: string;
+  colors: ThemeColors;
+}
+
+// Cache for loaded themes
+const loadedThemes: Map<string, Theme> = new Map();
 
 /**
- * All available themes
+ * Get themes directory path
  */
-export const THEMES = {
-  dracula,
-  catppuccin,
-} as const;
-
-export type ThemeName = keyof typeof THEMES;
-
-/**
- * Get theme by name
- */
-export function getTheme(name: ThemeName): typeof dracula {
-  return THEMES[name] || dracula;
+function getThemesDir(): string {
+  // Get the directory of this file
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  return path.join(__dirname);
 }
 
 /**
- * UI Color aliases for easier use
+ * Load a theme from JSON file
  */
-export interface UIColors {
-  // Backgrounds
-  background: string;
-  surface: string;
-  surfaceAlt: string;
-  inputBg: string;
-  codeBackground: string;
+function loadThemeFromFile(name: string): Theme | null {
+  const themesDir = getThemesDir();
+  const filePath = path.join(themesDir, `${name}.json`);
   
-  // Text
-  text: string;
-  textDim: string;
-  textMuted: string;
-  textInput: string;
-  textPlaceholder: string;
-  
-  // Accents
-  primary: string;
-  secondary: string;
-  accent: string;
-  success: string;
-  warning: string;
-  error: string;
-  
-  // UI Elements
-  border: string;
-  buttonBg: string;
-  buttonText: string;
-  
-  // Syntax highlighting
-  keyword: string;
-  string: string;
-  number: string;
-  type: string;
-  function: string;
-  comment: string;
-  operator: string;
-  constant: string;
-  variable: string;
+  try {
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
+    
+    const data = fs.readFileSync(filePath, "utf-8");
+    const pywal: PywalColors = JSON.parse(data);
+    const colors = pywal.colors;
+    
+    // Convert pywal format to base16
+    return {
+      name,
+      colors: {
+        base00: colors.color0 || pywal.special.background,
+        base01: colors.color1 || colors.color0 || pywal.special.background,
+        base02: colors.color2 || colors.color1 || pywal.special.background,
+        base03: colors.color3 || colors.color2 || pywal.special.foreground || "#000000",
+        base04: colors.color4 || colors.color3 || pywal.special.foreground || "#000000",
+        base05: colors.color5 || pywal.special.foreground || "#ffffff",
+        base06: colors.color6 || colors.color5 || pywal.special.foreground || "#ffffff",
+        base07: colors.color7 || pywal.special.foreground || "#ffffff",
+        base08: colors.color8 || colors.color4 || "#ff0000",
+        base09: colors.color9 || colors.color5 || "#ff0000",
+        base0a: colors.color10 || colors.color6 || "#ffff00",
+        base0b: colors.color11 || colors.color7 || "#00ff00",
+        base0c: colors.color12 || colors.color8 || "#00ffff",
+        base0d: colors.color13 || colors.color9 || "#0000ff",
+        base0e: colors.color14 || colors.color10 || "#ff00ff",
+        base0f: colors.color15 || colors.color11 || "#ffff00",
+      },
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Map base16 colors to UI color aliases for a theme
+ * Get all available theme names
  */
-export function mapThemeToUIColors(theme: typeof dracula): UIColors {
-  const c = theme.colors;
+export function getThemeNames(): string[] {
+  const themesDir = getThemesDir();
+  try {
+    const files = fs.readdirSync(themesDir);
+    return files
+      .filter(f => f.endsWith(".json"))
+      .map(f => f.replace(".json", ""))
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Get theme by name, loaded from JSON file
+ */
+export function getTheme(name: string): Theme {
+  // Check cache first
+  if (loadedThemes.has(name)) {
+    return loadedThemes.get(name)!;
+  }
+  
+  // Try to load from file
+  const theme = loadThemeFromFile(name);
+  if (theme) {
+    loadedThemes.set(name, theme);
+    return theme;
+  }
+  
+  // Default fallback - catppuccin if available, otherwise first available
+  const available = getThemeNames();
+  const firstTheme = available[0];
+  if (available.includes("catppuccin")) {
+    return getTheme("catppuccin");
+  }
+  if (firstTheme) {
+    return getTheme(firstTheme);
+  }
+  
+  // Ultimate fallback - hardcoded minimal theme
   return {
-    // Backgrounds
-    background: c.base00,
-    surface: c.base01,
-    surfaceAlt: c.base02,
-    inputBg: c.base02,
-    codeBackground: c.base00,
-    
-    // Text
-    text: c.base05,
-    textDim: c.base03,
-    textMuted: c.base04,
-    textInput: c.base05,
-    textPlaceholder: c.base03,
-    
-    // Accents
-    primary: c.base0d,  // Blue/Purple
-    secondary: c.base0e, // Pink
-    accent: c.base0c,  // Cyan
-    success: c.base0b, // Green
-    warning: c.base09, // Orange
-    error: c.base08,   // Red
-    
-    // UI Elements
-    border: c.base02,
-    buttonBg: c.base02,
-    buttonText: c.base05,
-    
-    // Syntax - using Dracula defaults
-    keyword: "#ff79c6",
-    string: "#f1fa8c",
-    number: "#bd93f9",
-    type: "#8be9fd",
-    function: "#50fa7b",
-    comment: "#6272a4",
-    operator: "#f8f8f2",
-    constant: "#bd93f9",
-    variable: "#ffb86c",
+    name: "fallback",
+    colors: {
+      base00: "#1e1e2e",
+      base01: "#181825",
+      base02: "#313244",
+      base03: "#6c7086",
+      base04: "#7f849e",
+      base05: "#cdd6f4",
+      base06: "#e6e9ef",
+      base07: "#ffffff",
+      base08: "#f38ba8",
+      base09: "#fab387",
+      base0a: "#f9e2af",
+      base0b: "#a6e3a1",
+      base0c: "#89dceb",
+      base0d: "#89b4fa",
+      base0e: "#f5c2e7",
+      base0f: "#eba0ac",
+    },
   };
 }

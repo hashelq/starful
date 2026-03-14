@@ -6,20 +6,17 @@ import {
   ScrollBoxRenderable,
   InputRenderableEvents,
   MarkdownRenderable,
-  SyntaxStyle,
   TreeSitterClient,
-  StyledText,
   CliRenderer,
   createTextAttributes,
-  TabSelectRenderable,
   ASCIIFontRenderable,
-  ScrollBox,
 } from "@opentui/core";
 // AGENT: Mock Ollama client for testing (replace with real OllamaClient for production)
 import { MockOllamaClient } from "../llm/implementations/mock-ollama-client.js";
 import { FoldableBox } from "./components/FoldableBox.js";
 import { getTextInRange } from "./utils/text-buffer.js";
 import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
+import { DEFAULT_MODEL, COLORS, defaultSyntaxStyle } from "./constants.js";
 
 let notifications: NotificationsOverlay;
 
@@ -33,104 +30,6 @@ interface Message {
   isThinking?: boolean;
   thinkingContent?: string;
 }
-
-// AGENT: Default model - change this to use a different Ollama model
-const DEFAULT_MODEL = "Qwen3.5-27B.Q4_K_M__opus4.6_dist:latest";
-
-// AGENT: Dracula-inspired syntax theme for code/markdown highlighting (via Tree-sitter)
-const defaultSyntaxStyle = SyntaxStyle.fromTheme([
-  // ========== Strings =========
-  { scope: ["string"], style: { foreground: "#a5d6ff" } },
-  { scope: ["string.quoted"], style: { foreground: "#7ee787" } },
-  { scope: ["string-constant"], style: { foreground: "#ffa657" } },
-  { scope: ["string.regexp"], style: { foreground: "#79c0ff" } },
-
-  // ========== Keywords =========
-  { scope: ["keyword"], style: { foreground: "#ff79c6", bold: true } },
-  { scope: ["keyword.control"], style: { foreground: "#ff79c6" } },
-  { scope: ["keyword.flow"], style: { foreground: "#ff79c6" } },
-
-  // ========== Numbers, Types, Variables =========
-  { scope: ["number"], style: { foreground: "#bd93f9" } },
-  { scope: ["type"], style: { foreground: "#8be9fd" } },
-  { scope: ["variable"], style: { foreground: "#ffb86c" } },
-
-  // ========== Functions & Methods =========
-  { scope: ["function"], style: { foreground: "#50fa7b", bold: true } },
-  { scope: ["function.call"], style: { foreground: "#50fa7b" } },
-  { scope: ["method"], style: { foreground: "#8be9fd" } },
-
-  // ========== Comments =========
-  { scope: ["comment"], style: { foreground: "#6272a4", italic: true } },
-  { scope: ["doc-comment"], style: { foreground: "#6272a4" } },
-
-  // ========== Operators =========
-  { scope: ["operator"], style: { foreground: "#fff" } },
-  { scope: ["punctuation.separator"], style: { foreground: "#f8f8f2" } },
-
-  // ========== Classes, Constants, Namespaces =========
-  { scope: ["class"], style: { foreground: "#ffb86c", bold: true } },
-  { scope: ["namespace"], style: { foreground: "#50fa7b" } },
-  { scope: ["constant"], style: { foreground: "#bd93f9" } },
-
-  // ========== Markdown-specific (CLI-friendly) =========
-  // Headers - bold + bright colors for visibility in terminal
-  { scope: ["markup.heading"], style: { bold: true, foreground: "#50fa7b" } }, // Green bold
-  {
-    scope: ["markup.heading.1"],
-    style: { bold: true, foreground: "#ff79c6", underline: true },
-  }, // Pink bold underline
-  { scope: ["markup.heading.2"], style: { bold: true, foreground: "#bd93f9" } }, // Purple bold
-  { scope: ["markup.heading.3"], style: { bold: true, foreground: "#8be9fd" } }, // Cyan bold
-  { scope: ["markup.heading.4"], style: { bold: true, foreground: "#ffb86c" } }, // Orange bold
-  { scope: ["markup.heading.5"], style: { bold: true, foreground: "#f1fa8c" } }, // Yellow bold
-  { scope: ["markup.heading.6"], style: { bold: true, foreground: "#ff5555" } }, // Red bold
-
-  // Text formatting
-  { scope: ["markup.bold"], style: { bold: true, foreground: "#f8f8f2" } }, // White bold
-  { scope: ["markup.italic"], style: { italic: true, foreground: "#f8f8f2" } }, // White italic
-  {
-    scope: ["markup.strikethrough"],
-    style: { dim: true, foreground: "#6272a4" },
-  }, // Gray strikethrough
-  {
-    scope: ["markup.underline"],
-    style: { underline: true, foreground: "#8be9fd" },
-  }, // Cyan underline
-
-  // Links
-  { scope: ["markup.link"], style: { underline: true, foreground: "#8be9fd" } }, // Cyan underline
-  {
-    scope: ["markup.link.url"],
-    style: { foreground: "#79c0ff", underline: true },
-  }, // Blue underline
-  { scope: ["markup.uri"], style: { foreground: "#79c0ff" } }, // Blue
-
-  // Quotes & Lists
-  { scope: ["markup.quote"], style: { italic: true, foreground: "#bd93f9" } }, // Purple italic
-  { scope: ["markup.list"], style: { foreground: "#ff79c6" } }, // Pink
-
-  // Code (inline & fences)
-  {
-    scope: ["markup.raw"],
-    style: { foreground: "#f1fa8c", background: "#44475a" },
-  }, // Yellow bg
-  {
-    scope: ["markup.raw.code-fence"],
-    style: { bold: true, foreground: "#ff79c6" },
-  }, // Pink bold fence
-  {
-    scope: ["markup.raw.inline"],
-    style: { foreground: "#f1fa8c", background: "#282a36" },
-  }, // Yellow on dark
-
-  // ========== Code fences (```) =========
-  {
-    scope: ["markup.raw.code-fence"],
-    style: { bold: true, foreground: "#ff5555" },
-  },
-  { scope: ["markup.raw"], style: { foreground: "#f1fa8c" } },
-]);
 
 function createMD(renderer: CliRenderer, treeSitterClient: TreeSitterClient) {
   return new MarkdownRenderable(renderer, {
@@ -243,13 +142,13 @@ async function main() {
   const figletBanner = new ASCIIFontRenderable(renderer, {
     text: "STARFUL",
     font: "block",
-    color: "#a5d6ff",
+      color: COLORS.assistantText,
   });
 
   // AGENT: Title banner - added to history so it scrolls with chat
   const titleText = new TextRenderable(renderer, {
     content: "TIP: you can /revert last changes",
-    fg: "#8b949e",
+    fg: COLORS.dimText,
   });
 
   // Add to history container so they scroll with messages
@@ -373,8 +272,8 @@ async function main() {
               let buttonCopy = new TextRenderable(renderer, {
                 content: " COPY ",
                 paddingRight: 1,
-                bg: "#44475a",
-                fg: "#f8f8f2",
+                bg: COLORS.copyButtonBg,
+                fg: COLORS.copyButtonText,
               });
               let codeMarkdown: MarkdownRenderable;
               buttonCopy.onMouseUp = () => {
@@ -403,7 +302,7 @@ async function main() {
 
               languageLabel = new TextRenderable(renderer, {
                 content: "",
-                fg: "lime",
+                fg: COLORS.languageLabel,
                 attributes: createTextAttributes({ bold: true }),
               });
               codeLang = "";
@@ -412,7 +311,7 @@ async function main() {
               const codeBox = new BoxRenderable(renderer, {
                 width: "100%",
                 height: "auto",
-                backgroundColor: "#1e1e1e",
+                backgroundColor: COLORS.codeBackground,
                 padding: 1,
               });
 
@@ -495,7 +394,7 @@ async function main() {
     } catch (error) {
       const errorMsg = new TextRenderable(renderer, {
         content: `Error: ${error instanceof Error ? error.message : "Failed to connect to Ollama. Make sure it's running on localhost:11434"}`,
-        fg: "#f85149", // Red for errors
+        fg: COLORS.error, // Red for errors
       });
       historyContainer.add(errorMsg);
     } finally {
@@ -510,7 +409,7 @@ async function main() {
   ): TextRenderable {
     const messageText = new TextRenderable(renderer, {
       content: content,
-      fg: role === "user" ? "#3fb950" : "#a5d6ff", // Green for user, Blue for assistant
+      fg: role === "user" ? COLORS.userText : COLORS.assistantText,
     });
 
     historyContainer.add(messageText);
@@ -525,8 +424,8 @@ async function main() {
   const input = new InputRenderable(renderer, {
     width: "100%",
     placeholder: "> Ask me anything...",
-    textColor: "#f0f6fc",
-    placeholderColor: "#90969d",
+    textColor: COLORS.inputText,
+    placeholderColor: COLORS.placeholderText,
   });
   input.on(InputRenderableEvents.ENTER, async (val) => {
     const value = val.trim();

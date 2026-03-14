@@ -89,6 +89,9 @@ export class CommandModal {
       height: "auto",
       backgroundColor: "#1e1e2e", // Catppuccin-like dark
       flexDirection: "column",
+      paddingY: 1,
+      paddingX: 3,
+      gap: 1
     });
     shadowBox.add(this._modalBox);
 
@@ -220,6 +223,8 @@ export class CommandModal {
       const item = new TextRenderable(this._renderer, {
         content: displayText,
         width: "100%",
+        flexGrow: 1,
+        flexShrink: 0,
         height: 1,
         fg: isSelected ? "#1e1e2e" : "#cdd6f4", // Dark text when selected, light otherwise
         bg: isSelected ? "#89b4fa" : undefined, // Blue highlight when selected

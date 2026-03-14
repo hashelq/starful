@@ -13,6 +13,7 @@ import {
   createTextAttributes,
   TabSelectRenderable,
   ASCIIFontRenderable,
+  ScrollBox,
 } from "@opentui/core";
 // AGENT: Mock Ollama client for testing (replace with real OllamaClient for production)
 import { MockOllamaClient } from "../llm/implementations/mock-ollama-client.js";
@@ -298,9 +299,9 @@ async function main() {
       let streamingThinkingElement;
       let streamingMarkdownContent;
 
+      let streamingMarkdownContent2Fold: MarkdownRenderable | null;
+
       let fullResponse = "";
-      let assistantMessageAdded = false;
-      let responseText: TextRenderable | null = null;
 
       let thinkingStarted = false;
       let thinking = "";
@@ -316,6 +317,8 @@ async function main() {
       let writeMarkDown = (content: string) => {
         let text = inCode ? `\`\`\`${content}\`\`\`` : content;
         streamingMarkdownContent!.content = text;
+        if (streamingMarkdownContent2Fold)
+          streamingMarkdownContent2Fold.content = text;
       };
 
       // Stream the response
@@ -424,11 +427,36 @@ async function main() {
                 treeSitterClient,
               });
 
+              streamingMarkdownContent2Fold = new MarkdownRenderable(renderer, {
+                width: "100%",
+                height: "auto",
+                content: "",
+                syntaxStyle: defaultSyntaxStyle,
+                streaming: false,
+                conceal: true,
+                treeSitterClient,
+              });
+
               topBar.add(languageLabel);
               topBar.add(rightBar);
               codeBox.add(topBar);
-              let fold = new FoldableBox(renderer, { foldTitle: "code" });
+              let fold = new FoldableBox(renderer, { 
+                foldTitle: "code",
+                expandOnly: true 
+              });
               fold.setContent(codeMarkdown);
+
+              // implement folded view
+              {
+                let foldedScroll = new ScrollBoxRenderable(renderer, {
+                  width: "100%",
+                  height: 4,
+                  scrollY: true,
+                  stickyScroll: true,
+                });
+                foldedScroll.add(streamingMarkdownContent2Fold);
+                fold.setPlaceholder(foldedScroll);
+              }
               codeBox.add(fold);
               historyContainer.add(codeBox);
 
@@ -437,6 +465,7 @@ async function main() {
               content = content.substring(codeTagIndex + 3);
 
               streamingMarkdownContent = createMD(renderer, treeSitterClient);
+              streamingMarkdownContent2Fold = null;
 
               historyContainer.add(streamingMarkdownContent);
             }

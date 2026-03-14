@@ -42,30 +42,39 @@ export class CommandModal {
     this._onClose = onClose;
     this._filteredCommands = registry.getAll();
 
-    // Create overlay (full screen with opacity for transparency effect)
+    // Create outer container (just for organization)
     this._overlay = new BoxRenderable(renderer, {
       width: "100%",
       height: "100%",
-      backgroundColor: "#000000", // Black base
-      opacity: 0.8, // Use opacity property
       position: "absolute",
       top: 0,
       left: 0,
-      shouldFill: true, // Force fill the background
-      justifyContent: "center",
-      alignItems: "center",
     });
 
-    // Create centered wrapper
+    // Layer 1: Background overlay (full screen dark)
+    const backgroundLayer = new BoxRenderable(renderer, {
+      width: "100%",
+      height: "100%",
+      backgroundColor: "#000000",
+      position: "absolute",
+      top: 0,
+      left: 0,
+      zIndex: 100,
+    });
+    this._overlay.add(backgroundLayer);
+
+    // Layer 2: Centered wrapper for modal
     const centerWrapper = new BoxRenderable(renderer, {
-      width: "auto",
-      height: "auto",
+      width: "100%",
+      height: "100%",
       justifyContent: "center",
       alignItems: "center",
+      position: "absolute",
+      zIndex: 200,
     });
     this._overlay.add(centerWrapper);
 
-    // Create shadow box (black background for shadow effect)
+    // Shadow box (black with padding for shadow effect)
     const shadowBox = new BoxRenderable(renderer, {
       width: 60,
       height: "auto",
@@ -74,7 +83,7 @@ export class CommandModal {
     });
     centerWrapper.add(shadowBox);
 
-    // Create modal box (the actual modal content - dark background)
+    // Modal box (the actual content)
     this._modalBox = new BoxRenderable(renderer, {
       width: "100%",
       height: "auto",

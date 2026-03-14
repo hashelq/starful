@@ -73,22 +73,11 @@ async function main() {
     exitOnCtrlC: true,
     prependInputHandlers: [
       (sequence) => {
-        const key = parseKeypress(sequence);
+        // Parse key with Kitty keyboard protocol support
+        const key = parseKeypress(sequence, { useKittyKeyboard: true });
         
-        // Check for Ctrl+P - handle both raw and Kitty protocol
-        // Kitty: \x1B[112;5u = ESC + Ctrl+P (112 = 'p', 5 = Ctrl modifier)
-        let isCtrlP = false;
-        
-        if (key) {
-          // Direct detection
-          isCtrlP = key.ctrl && key.name === "p";
-        } else if (typeof sequence === "string") {
-          // Kitty protocol: \x1B[112;5u = Ctrl+P
-          // 112 = ASCII 'p', 5 = Ctrl modifier
-          isCtrlP = sequence.startsWith("\x1B[") && sequence.includes("112") && sequence.includes("5u");
-        }
-        
-        if (isCtrlP) {
+        // Check for Ctrl+P
+        if (key && key.ctrl && key.name === "p") {
           commandModal?.toggle();
           return true; // Stop propagation
         }

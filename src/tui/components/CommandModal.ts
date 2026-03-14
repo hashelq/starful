@@ -42,12 +42,11 @@ export class CommandModal {
     this._onClose = onClose;
     this._filteredCommands = registry.getAll();
 
-    // Create overlay (full screen semi-transparent black)
+    // Create overlay (full screen dark background)
     this._overlay = new BoxRenderable(renderer, {
       width: "100%",
       height: "100%",
-      backgroundColor: "#000000",
-      opacity: 0.85,
+      backgroundColor: "#0a0a0a", // Dark background for overlay effect
       position: "absolute",
       top: 0,
       left: 0,

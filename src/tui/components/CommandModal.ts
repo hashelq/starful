@@ -42,7 +42,7 @@ export class CommandModal {
     this._onClose = onClose;
     this._filteredCommands = registry.getAll();
 
-    // Create outer container (just for organization)
+    // Create outer container
     this._overlay = new BoxRenderable(renderer, {
       width: "100%",
       height: "100%",
@@ -51,7 +51,7 @@ export class CommandModal {
       left: 0,
     });
 
-    // Layer 1: Background overlay (full screen dark)
+    // Background layer - solid dark (simulates overlay)
     const backgroundLayer = new BoxRenderable(renderer, {
       width: "100%",
       height: "100%",
@@ -63,7 +63,7 @@ export class CommandModal {
     });
     this._overlay.add(backgroundLayer);
 
-    // Layer 2: Centered wrapper for modal
+    // Centered wrapper for modal
     const centerWrapper = new BoxRenderable(renderer, {
       width: "100%",
       height: "100%",
@@ -74,7 +74,7 @@ export class CommandModal {
     });
     this._overlay.add(centerWrapper);
 
-    // Shadow box (black with padding for shadow effect)
+    // Shadow box (creates depth effect)
     const shadowBox = new BoxRenderable(renderer, {
       width: 60,
       height: "auto",

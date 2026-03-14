@@ -63,26 +63,31 @@ export class CommandModal {
     });
     this._overlay.add(centerWrapper);
 
-    // Create modal box (the actual modal content)
-    this._modalBox = new BoxRenderable(renderer, {
+    // Create shadow box (black background for shadow effect)
+    const shadowBox = new BoxRenderable(renderer, {
       width: 60,
       height: "auto",
-      backgroundColor: COLORS.darkBackground,
-      border: true,
-      borderStyle: "rounded",
-      borderColor: COLORS.assistantText,
-      flexDirection: "column",
+      backgroundColor: "#000000",
       padding: 1,
     });
-    centerWrapper.add(this._modalBox);
+    centerWrapper.add(shadowBox);
 
-    // Create search input
+    // Create modal box (the actual modal content - dark background)
+    this._modalBox = new BoxRenderable(renderer, {
+      width: "100%",
+      height: "auto",
+      backgroundColor: "#1e1e2e", // Catppuccin-like dark
+      flexDirection: "column",
+    });
+    shadowBox.add(this._modalBox);
+
+    // Create search input with fancy styling
     this._searchInput = new InputRenderable(renderer, {
       width: "100%",
       placeholder: "Search commands...",
-      textColor: COLORS.inputText,
-      placeholderColor: COLORS.placeholderText,
-      backgroundColor: COLORS.codeBackground,
+      textColor: "#cdd6f4", // Light text
+      placeholderColor: "#6c7086", // Dim placeholder
+      backgroundColor: "#181825", // Dark input bg
     });
     this._searchInput.on(InputRenderableEvents.CHANGE, (value) => {
       this._filterCommands(value);
@@ -158,11 +163,11 @@ export class CommandModal {
   private _updateSelection(): void {
     this._commandItems.forEach((item, index) => {
       if (index === this._selectedIndex) {
-        item.bg = COLORS.copyButtonBg;
-        item.fg = COLORS.copyButtonText;
+        item.bg = "#89b4fa"; // Blue highlight
+        item.fg = "#1e1e2e"; // Dark text
       } else {
         item.bg = undefined;
-        item.fg = COLORS.dimText;
+        item.fg = "#cdd6f4"; // Light text
       }
     });
     this._renderer.requestRender?.();
@@ -184,12 +189,14 @@ export class CommandModal {
         ? `${cmd.name} ${cmd.shortcut}`
         : cmd.name;
       
+      // Catppuccin-inspired colors
+      const isSelected = index === this._selectedIndex;
       const item = new TextRenderable(this._renderer, {
         content: displayText,
         width: "100%",
         height: 1,
-        fg: index === this._selectedIndex ? COLORS.copyButtonText : COLORS.dimText,
-        bg: index === this._selectedIndex ? COLORS.copyButtonBg : undefined,
+        fg: isSelected ? "#1e1e2e" : "#cdd6f4", // Dark text when selected, light otherwise
+        bg: isSelected ? "#89b4fa" : undefined, // Blue highlight when selected
         paddingX: 1,
       });
 

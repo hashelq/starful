@@ -75,8 +75,20 @@ async function main() {
       (sequence) => {
         const key = parseKeypress(sequence);
         
-        // Ctrl+P - Toggle command modal
-        if (key && key.ctrl && key.name === "p") {
+        // Check for Ctrl+P - handle both raw and Kitty protocol
+        // Kitty: \x1B[112;5u = ESC + Ctrl+P (112 = 'p', 5 = Ctrl modifier)
+        let isCtrlP = false;
+        
+        if (key) {
+          // Direct detection
+          isCtrlP = key.ctrl && key.name === "p";
+        } else if (typeof sequence === "string") {
+          // Kitty protocol: \x1B[112;5u = Ctrl+P
+          // 112 = ASCII 'p', 5 = Ctrl modifier
+          isCtrlP = sequence.startsWith("\x1B[") && sequence.includes("112") && sequence.includes("5u");
+        }
+        
+        if (isCtrlP) {
           commandModal?.toggle();
           return true; // Stop propagation
         }
@@ -87,6 +99,7 @@ async function main() {
       },
     ],
   });
+  renderer.console.show();
 
   // Implement notifications
   let notifications: NotificationsOverlay;

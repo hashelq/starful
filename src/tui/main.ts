@@ -16,6 +16,13 @@ import {
 } from "@opentui/core";
 // AGENT: Mock Ollama client for testing (replace with real OllamaClient for production)
 import { MockOllamaClient } from "../llm/implementations/mock-ollama-client.js";
+import { FoldableBox } from "./components/FoldableBox.js";
+import { getTextInRange } from "./utils/text-buffer.js";
+import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
+
+let notifications: NotificationsOverlay;
+
+let dist = (x: number, y: number) => Math.abs(x - y);
 
 // AGENT: Message interface for chat history - tracks role, content, and renderable reference
 interface Message {
@@ -174,15 +181,54 @@ async function main() {
   const renderer = await createCliRenderer({
     targetFps: 60,
     useMouse: true,
+    enableMouseMovement: true, // Required for onMouseMove events
     autoFocus: true,
     exitOnCtrlC: true,
     prependInputHandlers: [
-      () => {
+      (k) => {
+        console.log(k);
         input.focus();
         return false;
       },
     ],
   });
+
+  // implement notifications
+  {
+    notifications = new NotificationsOverlay(renderer, {
+      position: "top",
+    });
+    renderer.root.add(notifications);
+  }
+
+  // Implement copy selection
+  {
+    let selectionStart = { x: -1, y: -1 };
+    renderer.root.onMouseDown = (event) => {
+      selectionStart.x = event.x;
+      selectionStart.y = event.y;
+    };
+
+    renderer.root.onMouseUp = (event) => {
+      if (selectionStart.x === -1) return;
+      if (!dist(event.x, selectionStart.x) && !dist(event.y, selectionStart.y))
+        return;
+      let text = getTextInRange(
+        renderer,
+        event.x,
+        event.y,
+        selectionStart.x,
+        selectionStart.y,
+      );
+      if (!text.trim()) return;
+      renderer.copyToClipboardOSC52(text);
+      notifications.show({
+        message: "Copied!",
+      });
+      renderer.clearSelection();
+      selectionStart.x = -1;
+    };
+  }
 
   // AGENT: History container - holds all chat messages in a column layout
   const historyContainer = new BoxRenderable(renderer, {
@@ -381,7 +427,9 @@ async function main() {
               topBar.add(languageLabel);
               topBar.add(rightBar);
               codeBox.add(topBar);
-              codeBox.add(codeMarkdown);
+              let fold = new FoldableBox(renderer, { foldTitle: "code" });
+              fold.setContent(codeMarkdown);
+              codeBox.add(fold);
               historyContainer.add(codeBox);
 
               streamingMarkdownContent = codeMarkdown;
@@ -449,7 +497,7 @@ async function main() {
     width: "100%",
     placeholder: "> Ask me anything...",
     textColor: "#f0f6fc",
-    placeholderColor: "#30363d",
+    placeholderColor: "#90969d",
   });
   input.on(InputRenderableEvents.ENTER, async (val) => {
     const value = val.trim();

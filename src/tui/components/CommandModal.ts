@@ -129,24 +129,35 @@ export class CommandModal {
    * Set up keyboard event handling
    */
   private _setupKeyboardHandling(): void {
-    // Handle Enter key - execute selected command
+    // Handle keyboard events on the search input
     this._searchInput.onKeyDown = (key) => {
-      if (key.name === "enter") {
+      const keyName = key.name;
+      
+      // Enter - execute selected command
+      if (keyName === "enter" || keyName === "return") {
         this._executeSelected();
         return true;
       }
-      if (key.name === "escape") {
+      
+      // Escape - close modal
+      if (keyName === "escape") {
         this.close();
         return true;
       }
-      if (key.name === "arrowup") {
+      
+      // Arrow Up - move selection up
+      if (keyName === "up" || keyName === "arrowup") {
         this._moveSelection(-1);
         return true;
       }
-      if (key.name === "arrowdown") {
+      
+      // Arrow Down - move selection down
+      if (keyName === "down" || keyName === "arrowdown") {
         this._moveSelection(1);
         return true;
       }
+      
+      // Allow default input behavior for other keys
       return false;
     };
   }

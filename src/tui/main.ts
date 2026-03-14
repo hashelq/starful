@@ -14,6 +14,7 @@ import {
 import { MockOllamaClient } from "../llm/implementations/mock-ollama-client.js";
 import { CodeBlock } from "./components/CodeBlock.js";
 import { getTextInRange } from "./utils/text-buffer.js";
+import { createMarkdownRenderable, getFormattedResponse } from "./utils/chat-helpers.js";
 import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
 import { DEFAULT_MODEL, COLORS, defaultSyntaxStyle } from "./constants.js";
 
@@ -40,20 +41,6 @@ function createMD(renderer: CliRenderer, treeSitterClient: TreeSitterClient) {
     conceal: true,
     treeSitterClient,
   });
-}
-
-// AGENT: Placeholder function - can be extended to format thinking vs content differently
-function getFormattedResponse(data: string, t: "content" | "thinking"): string {
-  switch (t) {
-    case "content":
-      return data;
-    case "thinking":
-      return data;
-  }
-}
-
-function mergeLLMResponse(...data: string[]): string {
-  return data.join("\n");
 }
 
 async function main() {
@@ -247,7 +234,7 @@ async function main() {
             contentStarted = true;
 
             // AGENT: Main content markdown (without code blocks - they get extracted)
-            streamingMarkdownContent = createMD(renderer, treeSitterClient);
+            streamingMarkdownContent = createMarkdownRenderable(renderer, treeSitterClient);
 
             historyContainer.add(streamingMarkdownContent);
 
@@ -279,7 +266,7 @@ async function main() {
             } else {
               content = content.substring(codeTagIndex + 3);
 
-              streamingMarkdownContent = createMD(renderer, treeSitterClient);
+              streamingMarkdownContent = createMarkdownRenderable(renderer, treeSitterClient);
               streamingMarkdownContent2Fold = null;
 
               historyContainer.add(streamingMarkdownContent);

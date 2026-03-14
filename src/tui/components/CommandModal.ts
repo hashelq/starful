@@ -50,9 +50,20 @@ export class CommandModal {
       position: "absolute",
       top: 0,
       left: 0,
+      justifyContent: "center",
+      alignItems: "center",
     });
 
-    // Create modal box (centered)
+    // Create centered wrapper
+    const centerWrapper = new BoxRenderable(renderer, {
+      width: "auto",
+      height: "auto",
+      justifyContent: "center",
+      alignItems: "center",
+    });
+    this._overlay.add(centerWrapper);
+
+    // Create modal box (the actual modal content)
     this._modalBox = new BoxRenderable(renderer, {
       width: 60,
       height: "auto",
@@ -60,13 +71,10 @@ export class CommandModal {
       border: true,
       borderStyle: "rounded",
       borderColor: COLORS.assistantText,
-      position: "absolute",
-      top: "50%",
-      left: "50%",
       flexDirection: "column",
       padding: 1,
     });
-    this._overlay.add(this._modalBox);
+    centerWrapper.add(this._modalBox);
 
     // Create search input
     this._searchInput = new InputRenderable(renderer, {

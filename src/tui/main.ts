@@ -19,8 +19,9 @@ import { createMarkdownRenderable, getFormattedResponse, createThinkingElement, 
 import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
 import { CommandModal } from "./components/CommandModal.js";
 import { createCommandRegistry } from "./commands.js";
-import { DEFAULT_MODEL, COLORS } from "./constants.js";
+import { COLORS } from "./constants.js";
 import { isModalOpen } from "./state.js";
+import { loadConfig } from "./config.js";
 
 // ============================================================================
 // Types
@@ -58,11 +59,14 @@ async function main() {
   const messages: Message[] = [];
   let isGenerating = false;
 
+  // AGENT: Load configuration
+  const config = loadConfig();
+
   // AGENT: Mock Ollama client instance for testing
   const ollama = new MockOllamaClient({
-    host: "localhost",
-    port: 11434,
-    timeout: 120000,
+    host: config.ollama.host,
+    port: config.ollama.port,
+    timeout: config.ollama.timeout,
   });
 
   // Create CLI renderer with keyboard shortcuts
@@ -115,7 +119,7 @@ async function main() {
     };
 
     const handleShowModel = () => {
-      notifications.show({ message: `Model: ${DEFAULT_MODEL}` });
+      notifications.show({ message: `Model: ${config.model}` });
     };
 
     const registry = createCommandRegistry(renderer, {
@@ -237,7 +241,7 @@ async function main() {
       let contentStarted = false;
       let content = "";
 
-      const chatStream = await ollama.chat(DEFAULT_MODEL, messagesForOllama);
+      const chatStream = await ollama.chat(config.model, messagesForOllama);
       let inCode: boolean = false;
       let languageLabel: null | TextRenderable = null;
       let codeLang = "";

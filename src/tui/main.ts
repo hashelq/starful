@@ -16,13 +16,12 @@ import { CodeBlock } from "./components/CodeBlock.js";
 import { getTextInRange } from "./utils/text-buffer.js";
 import { createMarkdownRenderable, getFormattedResponse, createThinkingElement, findCodeBlockDelimiter, createErrorMessage } from "./utils/chat-helpers.js";
 import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
-import { DEFAULT_MODEL, COLORS, defaultSyntaxStyle } from "./constants.js";
+import { DEFAULT_MODEL, COLORS } from "./constants.js";
 
-let notifications: NotificationsOverlay;
+// ============================================================================
+// Types
+// ============================================================================
 
-let dist = (x: number, y: number) => Math.abs(x - y);
-
-// AGENT: Message interface for chat history - tracks role, content, and renderable reference
 interface Message {
   role: "user" | "assistant";
   content: string;
@@ -31,17 +30,16 @@ interface Message {
   thinkingContent?: string;
 }
 
-function createMD(renderer: CliRenderer, treeSitterClient: TreeSitterClient) {
-  return new MarkdownRenderable(renderer, {
-    width: "100%",
-    height: "auto",
-    content: "",
-    syntaxStyle: defaultSyntaxStyle,
-    streaming: true,
-    conceal: true,
-    treeSitterClient,
-  });
-}
+// ============================================================================
+// Global State
+// ============================================================================
+
+let notifications: NotificationsOverlay;
+let dist = (x: number, y: number) => Math.abs(x - y);
+
+// ============================================================================
+// Main Application
+// ============================================================================
 
 async function main() {
   // AGENT: Initialize Tree-sitter for syntax highlighting in code blocks

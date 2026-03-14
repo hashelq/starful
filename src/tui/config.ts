@@ -11,9 +11,6 @@ export const DEFAULT_CONFIG = {
     timeout: 120000,
   },
   model: "Qwen3.5-27B.Q4_K_M__opus4.6_dist:latest",
-  ui: {
-    theme: "catppuccin",
-  },
 };
 
 /**

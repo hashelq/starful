@@ -1,12 +1,12 @@
 import { SyntaxStyle } from "@opentui/core";
 import { getTheme, mapThemeToUIColors, THEMES, type ThemeName } from "./themes.js";
-import { getConfig } from "./config.js";
+import { getTheme as getUITheme } from "./ui-config.js";
 
 /**
- * Get current theme from config, default to catppuccin
+ * Get current theme from UI config, default to catppuccin
  */
 function getCurrentTheme() {
-  const themeName = getConfig("ui", "theme") || "catppuccin";
+  const themeName = getUITheme() || "catppuccin";
   return getTheme(themeName as ThemeName);
 }
 

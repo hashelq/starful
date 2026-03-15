@@ -1,5 +1,5 @@
-import { OllamaClient } from "./ollama/implementations/ollama-client";
-import type { ChatMessage } from "./ollama/types/api-types";
+import { OllamaClient } from "./llm/implementations/ollama-client";
+import type { ChatMessage } from "./llm/types/api-types";
 
 let ollama = new OllamaClient({ host: "localhost", port: 11434 });
 
@@ -29,9 +29,9 @@ async function ask(prompt?: string) {
 
   for await (chunk of r) {
     if (chunk.message.thinking) process.stdout.write(chunk.message.thinking);
-    if (chunk.message.response) {
-      process.stdout.write(chunk.message.response);
-      msg += chunk.message.response;
+    if (chunk.message.content) {
+      process.stdout.write(chunk.message.content);
+      msg += chunk.message.content;
     }
     if (chunk.message.tool_calls) {
       toolCalls.push(...chunk.message.tool_calls);

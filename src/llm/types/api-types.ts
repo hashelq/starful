@@ -164,12 +164,30 @@ export interface ChatResponse {
   evalDuration?: Nanoseconds;
 }
 
+/*
+* This is a 2 step message content
+*
+* Both thinking and response are few tokens inside the whole response when are received through streaming.
+*
+* At first the bot MAY think. 
+* Thats why you will see no .content and .thinking like: { ..., "thinking": ")." }
+*
+* At second, after the thinking process is done, you will see the response.
+*
+* Thats why you will see no .thinking and .content like: { ..., "thinking": ")." }
+*
+* A tool call may be inserted inside of any message.
+*
+*/
 export interface MessageContent {
-  role: Role;
-  content: string;
+  /* Phase 1 */
+  thinking?: string;
+
+  /* Phase 2 */
+  content?: string;
+
   images?: Base64Image[];
   tool_calls?: ToolCall[];
-  thinking?: string;
 }
 
 // ==================== Generate Response Types ====================

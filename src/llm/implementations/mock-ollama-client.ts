@@ -290,7 +290,7 @@ export class MockOllamaClient {
 
   async *chat(
     model: string,
-    messages?: ChatMessage[],
+    _messages?: ChatMessage[],
     _tools?: any
   ): AsyncGenerator<{ model: string; createdAt: string; message: { thinking?: string; content?: string }; done: boolean }> {
     // Select random response

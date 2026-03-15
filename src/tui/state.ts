@@ -3,32 +3,17 @@
  * Tracks modal count to prevent input focus when modals are open
  */
 
-let _openModalCount = 0;
+import type { InputRenderable } from "@opentui/core";
 
-/**
- * Check if any modal is currently open
- */
-export function isModalOpen(): boolean {
-  return _openModalCount > 0;
+export let TUIState = {
+  currentInputFocused: <InputRenderable | null>null,
+};
+
+export function setFocused(input: InputRenderable) {
+  TUIState.currentInputFocused = input;
 }
 
-/**
- * Increment modal count (call when modal opens)
- */
-export function openModal(): void {
-  _openModalCount++;
-}
-
-/**
- * Decrement modal count (call when modal closes)
- */
-export function closeModal(): void {
-  _openModalCount = Math.max(0, _openModalCount - 1);
-}
-
-/**
- * Get current open modal count
- */
-export function getOpenModalCount(): number {
-  return _openModalCount;
+export function setUnfocused(input: InputRenderable) {
+  if (TUIState.currentInputFocused === input)
+    TUIState.currentInputFocused = null;
 }

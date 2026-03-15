@@ -56,11 +56,13 @@ class PaneButton {
     // Hover effect
     this._button.onMouseOver = () => {
       this._button.backgroundColor = COLORS.surfaceAlt;
+      this._label.attributes = createTextAttributes({ bold: true });
       this._renderer.requestRender?.();
     };
 
     this._button.onMouseOut = () => {
       this._button.backgroundColor = this._selected ? COLORS.primary : "transparent";
+      this._label.attributes = createTextAttributes({ bold: false });
       this._renderer.requestRender?.();
     };
   }

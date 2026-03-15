@@ -1,5 +1,4 @@
 import { BoxRenderable, CliRenderer, TextRenderable, ScrollBoxRenderable, createTextAttributes } from "@opentui/core";
-import { FoldableBox } from "./FoldableBox.js";
 import { COLORS } from "../../engine/colors.js";
 import { subscribeToThemeChanges } from "../../engine/theme.js";
 
@@ -69,13 +68,16 @@ class PaneButton {
 
 /**
  * PaneSection - A collapsible section with a title and buttons
+ * No triangle indicator, custom background colors
  */
 class PaneSection {
   private _section: BoxRenderable;
   private _title: TextRenderable;
   private _buttons: PaneButton[] = [];
-  private _foldable: FoldableBox;
+  private _buttonsContainer: BoxRenderable;
+  private _headerBox: BoxRenderable;
   private _folded: boolean = true;
+  private _renderer: CliRenderer;
 
   constructor(
     renderer: CliRenderer,
@@ -84,12 +86,24 @@ class PaneSection {
       buttons: Array<{ icon: string; label: string; onClick?: () => void }>;
     }
   ) {
+    this._renderer = renderer;
+
     // Section container
     this._section = new BoxRenderable(renderer, {
       width: "100%",
       height: "auto",
       flexDirection: "column",
       gap: 0,
+    });
+
+    // Header box - brighter background when unfolded
+    this._headerBox = new BoxRenderable(renderer, {
+      width: "100%",
+      height: 1,
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: COLORS.surfaceAlt, // lighter when folded
     });
 
     // Section title - brighter color
@@ -99,21 +113,23 @@ class PaneSection {
       attributes: createTextAttributes({ bold: true }),
     });
 
-    // Create foldable box for buttons (initially folded)
-    this._foldable = new FoldableBox(renderer, {
-      foldTitle: "",
-      folded: true,
-      expandOnly: false,
-    });
+    this._headerBox.add(this._title);
+    this._section.add(this._headerBox);
 
-    // Add buttons to foldable content
-    const buttonsContainer = new BoxRenderable(renderer, {
+    // Header click toggles fold
+    this._headerBox.onMouseUp = () => {
+      this.toggle();
+    };
+
+    // Buttons container
+    this._buttonsContainer = new BoxRenderable(renderer, {
       width: "100%",
       height: "auto",
       flexDirection: "column",
       gap: 0,
     });
 
+    // Add buttons
     for (const btn of options.buttons) {
       const button = new PaneButton(renderer, {
         icon: btn.icon,
@@ -121,36 +137,29 @@ class PaneSection {
         onClick: () => {
           // Expand when button clicked
           if (this._folded) {
-            this._foldable.toggle();
-            this._folded = false;
+            this.toggle();
           }
           btn.onClick?.();
         },
       });
       this._buttons.push(button);
-      buttonsContainer.add(button.renderable);
+      this._buttonsContainer.add(button.renderable);
     }
 
-    this._foldable.setContent(buttonsContainer);
+    this._section.add(this._buttonsContainer);
 
-    // Title that toggles fold on click
-    const titleToggle = new BoxRenderable(renderer, {
-      width: "100%",
-      height: 1,
-      flexDirection: "row",
-      justifyContent: "center",
-      alignItems: "center",
-    });
-    titleToggle.add(this._title);
+    // Initially hide buttons (folded)
+    this._buttonsContainer.visible = false;
+  }
 
-    // Add toggle click handler
-    titleToggle.onMouseUp = () => {
-      this._foldable.toggle();
-      this._folded = !this._folded;
-    };
-
-    this._section.add(titleToggle);
-    this._section.add(this._foldable);
+  toggle(): void {
+    this._folded = !this._folded;
+    this._buttonsContainer.visible = !this._folded;
+    
+    // Brighter background when unfolded
+    this._headerBox.backgroundColor = this._folded ? COLORS.surfaceAlt : COLORS.buttonBg;
+    
+    this._renderer.requestRender?.();
   }
 
   get renderable(): BoxRenderable {

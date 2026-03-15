@@ -526,8 +526,14 @@ async function main() {
     gap: 1,
   });
 
-  // Left pane - hides on narrow terminals
-  const leftPane = new LeftPane(renderer, { width: 30, threshold: 120 });
+  // Left pane - hides on narrow terminals, with navigation callback
+  const leftPane = new LeftPane(renderer, { 
+    width: 30, 
+    threshold: 120,
+    onNavigate: (section: string) => {
+      notifications.show({ message: `Navigate to: ${section}`, type: "info" });
+    }
+  });
 
   // Content container for the column layout (figlet, scrollbox, input)
   const contentContainer = new BoxRenderable(renderer, {

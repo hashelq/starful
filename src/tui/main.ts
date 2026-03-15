@@ -123,7 +123,6 @@ async function main() {
 
   // Create CLI renderer with keyboard shortcuts
   const renderer = await createCliRenderer({
-    consoleOptions: {position: "top"},
     targetFps: 60,
     useMouse: true,
     enableMouseMovement: true,
@@ -170,7 +169,6 @@ async function main() {
       },
     ],
   });
-  renderer.console.show();
 
   // AGENT: Cleanup on exit - destroy renderer and kill process
   const cleanup = () => {
@@ -697,7 +695,7 @@ async function main() {
   registerDefaultSidebarCategories();
 
   const sideBar = new SideBar(renderer, {
-    width: 25,
+    width: 35,
     threshold: 80,
     onNavigate: (section: string) => {
       notifications.show({ message: `Navigate to: ${section}`, type: "info" });

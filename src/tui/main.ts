@@ -311,8 +311,8 @@ async function main() {
   // In centered mode, limit width to improve readability
   const centeredMode = isCentered();
   const historyContainer = new BoxRenderable(renderer, {
-    width: centeredMode ? "80%" : "100%",
-    maxWidth: centeredMode ? 80 : "100%",
+    width: centeredMode ? "90%" : "100%",
+    maxWidth: centeredMode ? 90 : "100%",
     height: "auto",
     flexDirection: "column",
     paddingX: 2,

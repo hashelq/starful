@@ -106,6 +106,7 @@ export class StatusMatrix {
   private _cycleInterval: any = null;
   private _isGeneratingFn: () => boolean;
   private _currentAnimIndex = 0;
+  private _labelRow: TextRenderable[] = [];
   
   // Timing constants
   private static readonly IDLE_CYCLE_MS = 10000;
@@ -212,9 +213,9 @@ export class StatusMatrix {
       new LissajousAnimation(),
     ];
     
-    // Calculate grid size (1 y ≈ 1.5 x)
+    // Calculate grid size (1 y ≈ 1.5 x), leave 1 row for label
     const gridWidth = width - 2;
-    const gridHeight = Math.floor(gridWidth / 1.5);
+    const gridHeight = Math.floor(gridWidth / 1.5) - 1;
     
     // Create container
     this._container = new BoxRenderable(renderer, {
@@ -224,7 +225,7 @@ export class StatusMatrix {
       gap: 0,
     });
     
-    // Create grid
+    // Create grid (animation area)
     for (let y = 0; y < gridHeight; y++) {
       const row = new BoxRenderable(renderer, {
         width: "100%",
@@ -246,6 +247,23 @@ export class StatusMatrix {
       this._container.add(row);
     }
     
+    // Create label row at bottom (1 char padding)
+    const labelRow = new BoxRenderable(renderer, {
+      width: "100%",
+      flexDirection: "row",
+      justifyContent: "center",
+      gap: 0,
+    });
+    for (let x = 0; x < gridWidth; x++) {
+      const cell = new TextRenderable(renderer, {
+        content: " ",
+        fg: COLORS.text,
+      });
+      this._labelRow.push(cell);
+      labelRow.add(cell);
+    }
+    this._container.add(labelRow);
+    
     // Subscribe to theme changes
     subscribeToThemeChanges([
       { renderable: this._container, prop: 'backgroundColor', colorKey: 'surface' },
@@ -261,6 +279,7 @@ export class StatusMatrix {
   private _startCycling(): void {
     // Pick initial random animation
     this._currentAnimIndex = Math.floor(Math.random() * this._animations.length);
+    this._updateLabel();
     
     const cycle = () => {
       // Pick a new random animation
@@ -269,6 +288,7 @@ export class StatusMatrix {
         newIndex = Math.floor(Math.random() * this._animations.length);
       } while (newIndex === this._currentAnimIndex && this._animations.length > 1);
       this._currentAnimIndex = newIndex;
+      this._updateLabel();
       
       // Set next cycle interval based on generating state
       const isGenerating = this._isGeneratingFn();
@@ -285,6 +305,32 @@ export class StatusMatrix {
       ? StatusMatrix.GENERATING_CYCLE_MS 
       : StatusMatrix.IDLE_CYCLE_MS;
     this._cycleInterval = setTimeout(cycle, initialInterval);
+  }
+  
+  private _updateLabel(): void {
+    const anim = this._animations[this._currentAnimIndex];
+    if (!anim) return;
+    
+    const name = anim.name;
+    const labelWidth = this._labelRow.length;
+    
+    // Clear row
+    for (const cell of this._labelRow) {
+      cell.content = " ";
+    }
+    
+    // Center the name
+    const padding = Math.floor((labelWidth - name.length) / 2);
+    for (let i = 0; i < name.length; i++) {
+      const cellIndex = padding + i;
+      if (cellIndex >= 0 && cellIndex < this._labelRow.length) {
+        const cell = this._labelRow[cellIndex];
+        const char = name[i] ?? " ";
+        if (cell) cell.content = char;
+      }
+    }
+    
+    this._renderer.requestRender?.();
   }
   
   private _startAnimation(width: number, height: number): void {

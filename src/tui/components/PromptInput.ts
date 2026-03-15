@@ -40,6 +40,7 @@ export class PromptInput {
       placeholder: "> Ask me anything...",
       textColor: COLORS.inputText,
       placeholderColor: COLORS.placeholderText,
+      backgroundColor: COLORS.surface,
     });
     
     this._setupKeyHandlers();

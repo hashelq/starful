@@ -518,7 +518,7 @@ async function main() {
         }
         // If nothing started yet, just silently cancel
       } else {
-        // Real error - show it (but filter out timeout errors)
+        // Real error - show it
         let errorMessage = error instanceof Error ? error.message : "Ollama is not running";
         
         // Make error message more friendly
@@ -528,11 +528,8 @@ async function main() {
           errorMessage = "Could not connect to Ollama. Is it running on localhost:11434?";
         }
         
-        // Don't show timeout errors in chat
-        if (!errorMessage.includes("timed out") && !errorMessage.includes("timeout")) {
-          const errorMsg = createErrorMessage(renderer, `Error: ${errorMessage}`);
-          historyContainer.add(errorMsg);
-        }
+        const errorMsg = createErrorMessage(renderer, `Error: ${errorMessage}`);
+        historyContainer.add(errorMsg);
       }
     } finally {
       isGenerating = false;

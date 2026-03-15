@@ -9,6 +9,12 @@ import { SearchSuggestionsOverlay } from "./SearchSuggestionsOverlay.js";
 
 export type PromptInputSubmitHandler = (value: string) => void | Promise<void>;
 
+export interface PromptInputOptions {
+  onSubmit: PromptInputSubmitHandler;
+  isGenerating: () => boolean;
+  onExit: () => void;
+}
+
 /**
  * PromptInput - User input component with history and search
  * Handles key navigation, prompt history, and search suggestions
@@ -17,16 +23,16 @@ export class PromptInput {
   public input: InputRenderable;
   private _renderer: RenderContext;
   private _searchSuggestions: SearchSuggestionsOverlay;
-  private _onSubmit: PromptInputSubmitHandler;
+  private _options: PromptInputOptions;
   
   constructor(
     renderer: RenderContext,
     searchSuggestions: SearchSuggestionsOverlay,
-    onSubmit: PromptInputSubmitHandler,
+    options: PromptInputOptions,
   ) {
     this._renderer = renderer;
     this._searchSuggestions = searchSuggestions;
-    this._onSubmit = onSubmit;
+    this._options = options;
     
     // Create input
     this.input = new InputRenderable(renderer, {
@@ -45,14 +51,20 @@ export class PromptInput {
     this.input.onKeyDown = (key) => {
       const history = getPromptHistory();
       
-      // Ctrl+D - exit
+      // Ctrl+D - exit (only when input is empty)
       if (key.ctrl && key.name === "d" && !this.input.value.length) {
-        return false; // Let parent handle
+        this._options.onExit();
+        return true;
       }
       
-      // Ctrl+C - cancel
+      // Ctrl+C - cancel or exit
       if (key.ctrl && key.name === "c") {
-        return false; // Let parent handle
+        if (this._options.isGenerating()) {
+          return false; // Let parent handle abort
+        } else {
+          this._options.onExit();
+          return true;
+        }
       }
       
       // Escape - exit search
@@ -150,7 +162,7 @@ export class PromptInput {
       
       // Submit
       if (value) {
-        await this._onSubmit(value);
+        await this._options.onSubmit(value);
       }
       
       return true;

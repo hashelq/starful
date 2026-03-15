@@ -2,9 +2,7 @@ import {
   createCliRenderer,
   BoxRenderable,
   TextRenderable,
-  InputRenderable,
   ScrollBoxRenderable,
-  InputRenderableEvents,
   MarkdownRenderable,
   TreeSitterClient,
   ASCIIFontRenderable,
@@ -22,6 +20,7 @@ import {
 } from "./utils/chat-helpers.js";
 import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
 import { SearchSuggestionsOverlay } from "./components/SearchSuggestionsOverlay.js";
+import { PromptInput } from "./components/PromptInput.js";
 import {
   createPromptModal,
   type PromptModal,
@@ -37,7 +36,6 @@ import {
 import { COLORS, initColors } from "../engine/colors.js";
 import { getTheme as getThemeFromConfig } from "../engine/ui-config.js";
 import { subscribeToThemeChanges } from "../engine/theme.js";
-import { getPromptHistory } from "../engine/prompt-history.js";
 import { TUIState } from "./state.js";
 import { loadConfig } from "../engine/config.js";
 import { MockOllamaClient } from "../engine/llm/implementations/mock-ollama-client.js";
@@ -143,7 +141,7 @@ async function main() {
             return true; // Stop propagation
           }
           // If not generating and input is empty, exit
-          if (!input.value.trim()) {
+          if (!promptInput.input.value.trim()) {
             return false; // Let it propagate to exit
           }
           return true; // Consume to prevent exit when input has content
@@ -165,7 +163,7 @@ async function main() {
         if (TUIState.currentInputFocused) {
           TUIState.currentInputFocused.focus();
         } else {
-          input.focus();
+          promptInput.focus();
         }
         return false;
       },
@@ -263,7 +261,7 @@ async function main() {
         registry,
       },
       onClose: () => {
-        input.focus();
+        promptInput.focus();
       },
       onSelect: (commandId) => {
         const cmd = registry.get(commandId);
@@ -468,7 +466,7 @@ async function main() {
 
               // Create CodeBlock component
               codeBlock = new CodeBlock(renderer, treeSitterClient, () =>
-                input.focus(),
+                promptInput.focus(),
               );
               const codeBlockDecorated = new BoxRenderable(renderer, {
                 border: true,
@@ -631,151 +629,13 @@ async function main() {
     }
   }
 
-  // AGENT: Input field - user types prompts here, CHANGE event fires on Enter
-  // No background color when typing - clean minimalist look
-  const input = new InputRenderable(renderer, {
-    width: "100%",
-    placeholder: "> Ask me anything...",
-    textColor: COLORS.inputText,
-    placeholderColor: COLORS.placeholderText,
-  });
-
-  // Handle key events directly on the input
-  input.onKeyDown = (key) => {
-    if (key.ctrl && key.name === "d" && !input.value.length) {
-      cleanup();
-    }
-
-    // Handle Ctrl+C - cancel stream if generating, else consume to prevent exit
-    if (key.ctrl && key.name === "c") {
-      if (appState.isGenerating && currentAbortController) {
-        currentAbortController.abort();
-        notifications.show({ message: "Stream cancelled", type: "info" });
-      } else {
-        cleanup();
-      }
-
-      return true;
-    }
-
-    // Handle Escape - exit search mode
-    if (key.name === "escape") {
-      getPromptHistory().resetSearch();
-      searchSuggestions.hide();
-      return false;
-    }
-
-    const history = getPromptHistory();
-
-    // Handle Up arrow - previous in search or normal mode
-    if (key.name === "up") {
-      const history = getPromptHistory();
-      
-      // If in cycling mode or search mode, continue that mode
-      if (history.isCycling || input.value === "") {
-        // Continue cycling through history (normal mode)
-        const prev = history.previous();
-        if (prev) {
-          input.value = prev;
-        }
-      } else if (history.isSearching) {
-        // Continue searching - update selection
-        history.searchPrevious();
-        const result = history.getCurrentSearchResult();
-        if (result) {
-          input.value = result;
-        }
-        // Update suggestions overlay
-        searchSuggestions.selectPrevious();
-      } else if (input.value) {
-        // Start search mode with current input as prefix
-        const result = history.startSearch(input.value);
-        if (result) {
-          input.value = result;
-        }
-        // Show suggestions overlay
-        // Get input position from the renderable
-        const inputPos = (input as any)._layout;
-        if (inputPos) {
-          searchSuggestions.show(input.value, history.getSearchMatches(), inputPos.x ?? 0, inputPos.y ?? 0);
-        } else {
-          searchSuggestions.show(input.value, history.getSearchMatches(), 0, 0);
-        }
-      }
-      return true;
-    }
-
-    // Handle Down arrow - next in search or normal mode
-    if (key.name === "down") {
-      const history = getPromptHistory();
-      
-      if (history.isCycling) {
-        const next = history.next();
-        input.value = next;
-      } else if (history.isSearching) {
-        // Continue searching - update selection
-        history.searchNext();
-        const result = history.getCurrentSearchResult();
-        input.value = result || history.getCurrentSearchResult() || "";
-        // Update suggestions overlay
-        searchSuggestions.selectNext();
-      } else if (input.value) {
-        // Normal next mode (not cycling yet)
-        const next = history.next();
-        input.value = next;
-      }
-      return true;
-    }
-
-    // Reset history index when user starts typing
-    // If in search mode, update search with new prefix
-    if (history.isSearching) {
-      const newPrefix = input.value + (key.name?.length === 1 ? key.name : "");
-      if (newPrefix) {
-        history.updateSearch(newPrefix);
-      } else {
-        history.resetSearch();
-      }
-    } else {
-      history.resetIndex();
-    }
-
-    return false;
-  };
-
-  // Handle input changes - update search if in search mode
-  input.on(InputRenderableEvents.CHANGE, (value: string) => {
-    const history = getPromptHistory();
-    if (history.isSearching) {
-      // Update search with new prefix
-      if (value) {
-        history.updateSearch(value);
-        // Update suggestions overlay
-        const inputPos2 = (input as any)._layout;
-        if (inputPos2) {
-          searchSuggestions.show(value, history.getSearchMatches(), inputPos2.x ?? 0, inputPos2.y ?? 0);
-        } else {
-          searchSuggestions.show(value, history.getSearchMatches(), 0, 0);
-        }
-      } else {
-        history.resetSearch();
-        searchSuggestions.hide();
-      }
-    }
-  });
-
-  input.on(InputRenderableEvents.ENTER, async (val) => {
-    const value = val.trim();
-
-    if (value && !appState.isGenerating) {
-      // Save to prompt history
-      getPromptHistory().add(value);
-
+  // AGENT: Input field - using PromptInput component with history navigation
+  const promptInput = new PromptInput(renderer, searchSuggestions, {
+    isGenerating: () => appState.isGenerating,
+    onExit: () => cleanup(),
+    onSubmit: async (value: string) => {
       // Add user message to history
       addStaticMessage("user", ` ${value}`);
-
-      // Clear the input field
-      input.value = "";
 
       // Build conversation history from existing messages
       const conversationHistory: Array<{
@@ -787,19 +647,14 @@ async function main() {
 
       // Stream the Ollama response
       await streamOllamaResponse(value, conversationHistory);
-    }
-
-    // Reset search mode
-    getPromptHistory().resetSearch();
-    searchSuggestions.hide();
-
-    return true; // Event handled
+    },
   });
 
-  input.focus();
+  // Focus the input
+  promptInput.focus();
 
-  // Add input to container
-  inputContainer.add(input);
+  // Add input to container (use the inner input renderable)
+  inputContainer.add(promptInput.input);
 
   // AGENT: Main container - root layout with flexbox row (leftPane | content)
   const mainContainer = new BoxRenderable(renderer, {
@@ -855,9 +710,9 @@ async function main() {
       colorKey: "background",
     },
     // Input colors - no background when typing
-    { renderable: input, prop: "textColor", colorKey: "inputText" },
+    { renderable: promptInput.input, prop: "textColor", colorKey: "inputText" },
     {
-      renderable: input,
+      renderable: promptInput.input,
       prop: "placeholderColor",
       colorKey: "placeholderText",
     },

@@ -203,6 +203,16 @@ export class CodeBlock {
   setContent(content: string): void {
     this._expandedMarkdown.content = content;
     this._foldedMarkdown.content = content;
+    
+    // Count lines (excluding empty lines at start/end)
+    const lines = content.split('\n').filter(line => line.trim()).length;
+    const maxFoldedLines = 8;
+    
+    // If content has fewer lines than max folded height, auto-expand
+    if (lines <= maxFoldedLines) {
+      this._fold.folded = false;
+    }
+    // Otherwise keep folded (default state)
   }
 
   /**

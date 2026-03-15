@@ -18,6 +18,7 @@ import { getTextInRange } from "./utils/text-buffer.js";
 import { createMarkdownRenderable, getFormattedResponse, createThinkingElement, findCodeBlockDelimiter, createErrorMessage } from "./utils/chat-helpers.js";
 import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
 import { createPromptModal, type PromptModal } from "./components/PromptModal.js";
+import { LeftPane } from "./components/LeftPane.js";
 import { createCommandRegistry, type CommandRegistry } from "../engine/commands/index.js";
 import { COLORS, initColors } from "../engine/colors.js";
 import { getTheme as getThemeFromConfig } from "../engine/ui-config.js";
@@ -526,27 +527,8 @@ async function main() {
     gap: 1,
   });
 
-  // Left accent bar - hides on narrow terminals
-  const leftBar = new BoxRenderable(renderer, {
-    width: 1,
-    height: "100%",
-    backgroundColor: COLORS.primary,
-    position: "absolute",
-    left: 0,
-    top: 0,
-  });
-  mainContainer.add(leftBar);
-
-  // Update left bar visibility on resize
-  const updateLeftBarVisibility = () => {
-    const terminalWidth = (renderer as any).terminalWidth || 80;
-    leftBar.visible = terminalWidth >= 70;
-    renderer.requestRender?.();
-  };
-  updateLeftBarVisibility();
-  renderer.on("resize", (_width: number, _height: number) => {
-    updateLeftBarVisibility();
-  });
+  // Left pane - hides on narrow terminals
+  const leftPane = new LeftPane(renderer, { width: 3, threshold: 70 });
 
   // Add all children to main container in order: figlet -> title -> scroll/history -> input
   // AGENT: Add scrollable area and input to main container
@@ -556,6 +538,9 @@ async function main() {
   // AGENT: Mount main container to renderer's root (root is readonly, use .add())
   renderer.root.add(mainContainer);
 
+  // AGENT: Add left pane (sidebar)
+  renderer.root.add(leftPane.renderable);
+
   // AGENT: Add command modal LAST so it appears on top
   renderer.root.add(commandModal.renderable);
 
@@ -563,8 +548,6 @@ async function main() {
   subscribeToThemeChanges([
     // Main container background
     { renderable: mainContainer, prop: 'backgroundColor', colorKey: 'background' },
-    // Left accent bar
-    { renderable: leftBar, prop: 'backgroundColor', colorKey: 'primary' },
     // Input colors - no background when typing
     { renderable: input, prop: 'textColor', colorKey: 'inputText' },
     { renderable: input, prop: 'placeholderColor', colorKey: 'placeholderText' },

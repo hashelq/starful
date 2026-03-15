@@ -43,6 +43,7 @@ export class CodeBlock {
     this._codeBox = new BoxRenderable(renderer, {
       width: "100%",
       height: "auto",
+      flexDirection: "row",
       backgroundColor: COLORS.inputBg,
       paddingX: 1,
       border: false,
@@ -91,8 +92,8 @@ export class CodeBlock {
     this._fold.setContent(this._expandedMarkdown);
 
     // Assemble the component
-    this._codeBox.add(headerBar);
     this._codeBox.add(this._fold);
+    this._codeBox.add(headerBar);
 
     // Subscribe all color properties to theme changes for automatic updates  
     subscribeToThemeChanges([
@@ -115,8 +116,8 @@ export class CodeBlock {
    */
   private _createHeaderBar(): BoxRenderable {
     const topBar = new BoxRenderable(this._renderer, {
-      width: "100%",
-      flexDirection: "row",
+      width: "auto",
+      flexDirection: "column",
     });
 
     // Language label
@@ -145,8 +146,8 @@ export class CodeBlock {
     });
     rightBar.add(this._copyButton);
 
-    topBar.add(this._languageLabel);
     topBar.add(rightBar);
+    topBar.add(this._languageLabel);
 
     return topBar;
   }

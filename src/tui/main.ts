@@ -415,6 +415,8 @@ Start by asking me something!`;
     paddingY: 1,
     height: 1,
     backgroundColor: COLORS.surface,
+    border: true,
+    borderColor: COLORS.border,
     marginBottom: 1,
   });
 

@@ -118,8 +118,7 @@ export class PromptHistory {
     }
     
     // At the end, return empty to clear input
-    this._currentIndex = -1;
-    this._isCycling = false;
+    // Don't reset cycling - user might want to continue
     return "";
   }
   

@@ -700,12 +700,27 @@ async function main() {
         input.value = next;
       } else if (history.isSearching) {
         const next = history.searchNext();
-        if (next) {
-          input.value = next;
-        } else {
-        input.value = "";
+        // Keep search mode even if empty - user can continue searching
+        input.value = next || history.getCurrentSearchResult() || "";
+      } else if (input.value) {
+        // Normal next mode (not cycling yet)
+        const next = history.next();
+        input.value = next;
       }
       return true;
+    }
+
+    // Reset history index when user starts typing
+    // If in search mode, update search with new prefix
+    if (history.isSearching) {
+      const newPrefix = input.value + (key.name?.length === 1 ? key.name : "");
+      if (newPrefix) {
+        history.updateSearch(newPrefix);
+      } else {
+        history.resetSearch();
+      }
+    } else {
+      history.resetIndex();
     }
 
     return false;

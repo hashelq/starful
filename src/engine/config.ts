@@ -11,37 +11,31 @@ export interface OllamaProviderConfig {
   timeout: number;
 }
 
-export interface ModelConfig {
-  name: string;
-}
-
 export type ProviderConfig = OllamaProviderConfig;
 
-export interface ModelsConfig {
-  [provider: string]: ModelConfig;
-}
-
-export interface ProvidersConfig {
-  [provider: string]: ProviderConfig;
+export interface ModelEntry {
+  provider: string;
+  name: string;
 }
 
 /**
  * Default configuration values
  */
 export const DEFAULT_CONFIG = {
-  providers: {
-    ollama: {
+  providers: [
+    {
       type: "ollama" as const,
       host: "localhost",
       port: 11434,
       timeout: 120000,
     },
-  },
-  models: {
-    ollama: {
+  ],
+  models: [
+    {
+      provider: "ollama",
       name: "qwen3.5:35b-better",
     },
-  },
+  ],
   defaultModel: "ollama/qwen3.5:35b-better",
 };
 
@@ -154,45 +148,45 @@ export function parseDefaultModel(): { provider: string; model: string } {
 /**
  * Set default model in "provider/model" format
  */
-export function setDefaultModel(provider: string, model: string): void {
+export function setDefaultModel(provider: string, modelName: string): void {
   const config = loadConfig();
-  config.defaultModel = `${provider}/${model}`;
+  config.defaultModel = `${provider}/${modelName}`;
   
   // Ensure provider exists
-  if (!(config.providers as ProvidersConfig)[provider]) {
-    (config.providers as ProvidersConfig)[provider] = {
+  if (!config.providers.find(p => (p as any).type === provider)) {
+    config.providers.push({
       type: "ollama",
       host: "localhost",
       port: 11434,
       timeout: 120000,
-    };
+    } as ProviderConfig);
   }
   
   // Ensure model exists for provider
-  const models = config.models as ModelsConfig;
-  if (!models[provider]) {
-    models[provider] = { name: model };
+  const existingModel = config.models.find(m => m.provider === provider);
+  if (existingModel) {
+    existingModel.name = modelName;
   } else {
-    models[provider].name = model;
+    config.models.push({ provider, name: modelName });
   }
   
   saveConfig(config);
 }
 
 /**
- * Get provider config by name
+ * Get provider config by type
  */
-export function getProviderConfig(provider: string): ProviderConfig | undefined {
+export function getProviderConfig(providerType: string): ProviderConfig | undefined {
   const config = loadConfig();
-  return (config.providers as ProvidersConfig)[provider];
+  return config.providers.find(p => p.type === providerType) as ProviderConfig | undefined;
 }
 
 /**
- * Get model config by provider name
+ * Get all models
  */
-export function getModelConfig(provider: string): ModelConfig | undefined {
+export function getAllModels(): ModelEntry[] {
   const config = loadConfig();
-  return (config.models as ModelsConfig)[provider];
+  return config.models;
 }
 
 /**

@@ -75,7 +75,6 @@ async function main() {
   const messages: Message[] = [];
   let isGenerating = false;
   let currentAbortController: AbortController | null = null;
-  let flowCounter = 0; // Counter for flow position hash
 
   // AGENT: Load configuration
   const config = loadConfig();
@@ -490,11 +489,11 @@ async function main() {
     }
   }
 
-  // AGENT: Helper to generate short hash from counter
+  // AGENT: Helper to generate random hash
   function generateFlowHash(): string {
-    flowCounter++;
-    // Simple hash based on counter - convert to hex and take last 6 chars
-    return flowCounter.toString(16).padStart(6, "0");
+    // Generate random 6-char hex hash
+    const hash = Math.floor(Math.random() * 16777215).toString(16).padStart(6, "0");
+    return "#" + hash;
   }
 
   // AGENT: Helper to add user/assistant messages to history (non-streaming)
@@ -516,14 +515,6 @@ async function main() {
         alignItems: "flex-start",
       });
 
-      // Flow position hash (blue highlight)
-      const flowHash = generateFlowHash();
-      const hashText = new TextRenderable(renderer, {
-        content: `[${flowHash}] `,
-        fg: "#55aaff", // Blue color (color 4)
-        attributes: createTextAttributes({ bold: true }),
-      });
-
       const messageText = new TextRenderable(renderer, {
         content: "> " + content,
         fg: COLORS.userText,
@@ -531,13 +522,16 @@ async function main() {
         flexGrow: 1,
       });
 
-      // Subscribe hash color to theme changes
-      subscribeToThemeChanges([
-        { renderable: hashText, prop: "fg", colorKey: "accent" },
-      ]);
+      // Flow position hash (blue highlight) - right side
+      const flowHash = generateFlowHash();
+      const hashText = new TextRenderable(renderer, {
+        content: ` ${flowHash}`,
+        fg: "#55aaff", // Blue color (color 4)
+        attributes: createTextAttributes({ bold: true }),
+      });
 
       const timestamp = new TextRenderable(renderer, {
-        content: time,
+        content: " " + time,
         fg: COLORS.dimText,
         attributes: createTextAttributes({ bold: true }),
       });
@@ -545,11 +539,12 @@ async function main() {
       // Subscribe message colors to theme changes
       subscribeToThemeChanges([
         { renderable: messageText, prop: "fg", colorKey: "userText" },
+        { renderable: hashText, prop: "fg", colorKey: "accent" },
         { renderable: timestamp, prop: "fg", colorKey: "dimText" },
       ]);
 
-      messageRow.add(hashText);
       messageRow.add(messageText);
+      messageRow.add(hashText);
       messageRow.add(timestamp);
       historyContainer.add(messageRow);
       messages.push({ role, content, renderable: messageText });

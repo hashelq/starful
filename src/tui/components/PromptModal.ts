@@ -88,6 +88,7 @@ export class PromptModal {
   private _filteredItems: PromptTreeNode[] = [];
   private _selectedIndex: number = 0;
   private _visible: boolean = false;
+  private _shadowBox: BoxRenderable;
 
   // AGENT: The fuzzy search happen automatically whenever user presses a key inside the input field. Be careful when changing this code.
   constructor(renderer: CliRenderer, options: PromptModalOptions) {
@@ -129,14 +130,17 @@ export class PromptModal {
     });
     this._overlay.add(centerWrapper);
 
-    // Shadow box
-    const shadowBox = new BoxRenderable(renderer, {
+    // Shadow box with left accent bar - hides on narrow terminals
+    this._shadowBox = new BoxRenderable(renderer, {
       width: 60,
       height: "auto",
       backgroundColor: COLORS.background,
       padding: 1,
+      border: true,
+      borderStyle: "rounded",
+      borderColor: COLORS.primary,
     });
-    centerWrapper.add(shadowBox);
+    centerWrapper.add(this._shadowBox);
 
     // Modal box
     this._modalBox = new BoxRenderable(renderer, {
@@ -149,7 +153,7 @@ export class PromptModal {
       paddingX: 3,
       gap: 1,
     });
-    shadowBox.add(this._modalBox);
+    this._shadowBox.add(this._modalBox);
 
     // Title (for select mode)
     let titleText = "";
@@ -208,15 +212,32 @@ export class PromptModal {
     // Subscribe to theme changes for all modal colors
     subscribeToThemeChanges([
       { renderable: backgroundLayer, prop: 'backgroundColor', colorKey: 'background' },
-      { renderable: shadowBox, prop: 'backgroundColor', colorKey: 'background' },
+      { renderable: this._shadowBox, prop: 'backgroundColor', colorKey: 'background' },
       { renderable: this._modalBox, prop: 'backgroundColor', colorKey: 'background' },
       { renderable: this._searchInput, prop: 'textColor', colorKey: 'textInput' },
       { renderable: this._searchInput, prop: 'placeholderColor', colorKey: 'textInput' },
       { renderable: this._searchInput, prop: 'backgroundColor', colorKey: 'surface' },
+      { renderable: this._shadowBox, prop: 'borderColor', colorKey: 'primary' },
     ]);
+
+    // Hide border on narrow terminals (< 70 chars) and update on resize
+    this._updateBorderVisibility();
+    this._renderer.on("resize", (_width: number, _height: number) => {
+      this._updateBorderVisibility();
+    });
 
     // Initially hidden
     this._overlay.visible = false;
+  }
+
+  /**
+   * Update border visibility based on terminal width
+   */
+  private _updateBorderVisibility(): void {
+    const terminalWidth = (this._renderer as any).terminalWidth || 80;
+    // Hide border if terminal is less than 70 characters wide
+    this._shadowBox.border = terminalWidth >= 70;
+    this._renderer.requestRender?.();
   }
 
   /**

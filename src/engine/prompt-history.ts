@@ -8,10 +8,17 @@ const DEFAULT_HISTORY_FILE = path.join(HISTORY_DIR, "default.txt");
 /**
  * PromptHistory - Manages prompt history for the CLI
  * Stores history in ~/.starful/data/prompt-history/default.txt
+ * Supports incremental search like oh-my-zsh
  */
 export class PromptHistory {
   private _history: string[] = [];
   private _currentIndex = -1;
+  
+  // Search mode state
+  private _searchPrefix = "";
+  private _searchMatches: string[] = [];
+  private _searchIndex = -1;
+  private _isSearching = false;
   
   constructor() {
     this._ensureDirectoryExists();
@@ -72,13 +79,14 @@ export class PromptHistory {
     
     // Reset index
     this._currentIndex = -1;
+    this.resetSearch();
     
     // Save to file
     this._save();
   }
   
   /**
-   * Get previous prompt (up arrow)
+   * Get previous prompt (up arrow) - normal mode
    * Returns empty string if at the beginning
    */
   previous(): string {
@@ -94,7 +102,7 @@ export class PromptHistory {
   }
   
   /**
-   * Get next prompt (down arrow)
+   * Get next prompt (down arrow) - normal mode
    * Returns empty string if at the end
    */
   next(): string {
@@ -108,6 +116,98 @@ export class PromptHistory {
     // At the end, return empty to clear input
     this._currentIndex = -1;
     return "";
+  }
+  
+  /**
+   * Start incremental search with current input as prefix
+   * Returns the first matching prompt or empty string
+   */
+  startSearch(prefix: string): string {
+    if (!prefix) {
+      this.resetSearch();
+      return "";
+    }
+    
+    this._isSearching = true;
+    this._searchPrefix = prefix;
+    this._searchMatches = this._history.filter((cmd) => 
+      cmd.toLowerCase().startsWith(prefix.toLowerCase())
+    );
+    this._searchIndex = 0;
+    
+    if (this._searchMatches.length > 0) {
+      return this._searchMatches[this._searchIndex] ?? "";
+    }
+    return "";
+  }
+  
+  /**
+   * Continue searching with updated prefix (when user modifies input)
+   */
+  updateSearch(prefix: string): string {
+    if (!this._isSearching || prefix !== this._searchPrefix) {
+      return this.startSearch(prefix);
+    }
+    return this.getCurrentSearchResult();
+  }
+  
+  /**
+   * Get previous match in search results
+   */
+  searchPrevious(): string {
+    if (!this._isSearching || this._searchMatches.length === 0) return "";
+    
+    this._searchIndex = (this._searchIndex - 1 + this._searchMatches.length) % this._searchMatches.length;
+    return this._searchMatches[this._searchIndex] ?? "";
+  }
+  
+  /**
+   * Get next match in search results
+   */
+  searchNext(): string {
+    if (!this._isSearching || this._searchMatches.length === 0) return "";
+    
+    this._searchIndex = (this._searchIndex + 1) % this._searchMatches.length;
+    return this._searchMatches[this._searchIndex] ?? "";
+  }
+  
+  /**
+   * Get current search result without moving
+   */
+  getCurrentSearchResult(): string {
+    if (!this._isSearching || this._searchMatches.length === 0) return "";
+    return this._searchMatches[this._searchIndex] ?? "";
+  }
+  
+  /**
+   * Check if currently in search mode
+   */
+  get isSearching(): boolean {
+    return this._isSearching;
+  }
+  
+  /**
+   * Get number of search matches
+   */
+  get searchMatchCount(): number {
+    return this._searchMatches.length;
+  }
+  
+  /**
+   * Get current search index (1-based for display)
+   */
+  get searchCurrentIndex(): number {
+    return this._searchIndex + 1;
+  }
+  
+  /**
+   * Reset search mode
+   */
+  resetSearch(): void {
+    this._searchPrefix = "";
+    this._searchMatches = [];
+    this._searchIndex = -1;
+    this._isSearching = false;
   }
   
   /**

@@ -650,29 +650,83 @@ async function main() {
       return true;
     }
 
-    // Handle Up arrow - previous history
+    // Handle Escape - exit search mode
+    if (key.name === "escape") {
+      getPromptHistory().resetSearch();
+      return false;
+    }
+
+    const history = getPromptHistory();
+
+    // Handle Up arrow - previous in search or normal mode
     if (key.name === "up") {
-      const history = getPromptHistory();
-      const prev = history.previous();
-      if (prev) {
-        input.value = prev;
+      if (history.isSearching) {
+        // Continue searching
+        const prev = history.searchPrevious();
+        if (prev) {
+          input.value = prev;
+        }
+      } else if (input.value) {
+        // Start search mode with current input as prefix
+        const result = history.startSearch(input.value);
+        if (result) {
+          input.value = result;
+        }
+      } else {
+        // Normal previous mode
+        const prev = history.previous();
+        if (prev) {
+          input.value = prev;
+        }
       }
       return true;
     }
 
-    // Handle Down arrow - next history
+    // Handle Down arrow - next in search or normal mode
     if (key.name === "down") {
-      const history = getPromptHistory();
-      const next = history.next();
-      input.value = next;
+      if (history.isSearching) {
+        const next = history.searchNext();
+        if (next) {
+          input.value = next;
+        } else {
+          // No more matches, show empty
+          input.value = "";
+        }
+      } else {
+        const next = history.next();
+        input.value = next;
+      }
       return true;
     }
 
     // Reset history index when user starts typing
-    getPromptHistory().resetIndex();
+    // If in search mode, update search with new prefix
+    if (history.isSearching) {
+      const newPrefix = input.value + (key.name?.length === 1 ? key.name : "");
+      if (newPrefix) {
+        history.updateSearch(newPrefix);
+      } else {
+        history.resetSearch();
+      }
+    } else {
+      history.resetIndex();
+    }
 
     return false;
   };
+
+  // Handle input changes - update search if in search mode
+  input.on(InputRenderableEvents.CHANGE, (value: string) => {
+    const history = getPromptHistory();
+    if (history.isSearching) {
+      // Update search with new prefix
+      if (value) {
+        history.updateSearch(value);
+      } else {
+        history.resetSearch();
+      }
+    }
+  });
 
   input.on(InputRenderableEvents.ENTER, async (val) => {
     const value = val.trim();
@@ -698,6 +752,9 @@ async function main() {
       // Stream the Ollama response
       await streamOllamaResponse(value, conversationHistory);
     }
+
+    // Reset search mode
+    getPromptHistory().resetSearch();
 
     return true; // Event handled
   });

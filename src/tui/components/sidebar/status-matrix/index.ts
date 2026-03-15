@@ -415,6 +415,8 @@ export class StatusMatrix {
             cell.fg = this.selectedColor;
           } else if (frame.intensity > 4) {
             cell.fg = this.temperatureColor;
+          }  else if (frame.intensity > 1) {
+            cell.fg = COLORS.text;
           } else {
             cell.fg = COLORS.textMuted;
           }

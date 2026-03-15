@@ -48,8 +48,8 @@ export class CodeBlock {
       border: false,
     });
 
-    // Create top bar with language label and copy button  
-    const topBar = this._createTopBar();
+    // Create header bar with language label and copy button  
+    const headerBar = this._createHeaderBar();
 
     // Create markdown renderables for expanded and folded views
     this._expandedMarkdown = this._createMarkdown("auto");
@@ -91,7 +91,7 @@ export class CodeBlock {
     this._fold.setContent(this._expandedMarkdown);
 
     // Assemble the component
-    this._codeBox.add(topBar);
+    this._codeBox.add(headerBar);
     this._codeBox.add(this._fold);
 
     // Subscribe all color properties to theme changes for automatic updates  
@@ -111,9 +111,9 @@ export class CodeBlock {
   }
 
   /**
-   * Create the top bar with language label and copy button
+   * Create the header bar with language label and copy button
    */
-  private _createTopBar(): BoxRenderable {
+  private _createHeaderBar(): BoxRenderable {
     const topBar = new BoxRenderable(this._renderer, {
       width: "100%",
       flexDirection: "row",

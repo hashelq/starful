@@ -334,6 +334,7 @@ export class StatusMatrix {
         newIndex = Math.floor(Math.random() * this._animations.length);
       } while (newIndex === this._currentAnimIndex && this._animations.length > 1);
       this._currentAnimIndex = newIndex;
+      this.selectedColor = StatusMatrix.ANIMATION_COLORS[Math.floor(Math.random() * StatusMatrix.ANIMATION_COLORS.length)] as Color;
       this._updateLabel();
       
       // Set next cycle interval based on generating state

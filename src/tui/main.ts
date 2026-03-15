@@ -297,8 +297,6 @@ async function main() {
     };
   }
 
-  renderer.console.show();
-
   // AGENT: History container - holds all chat messages in a column layout
   const historyContainer = new BoxRenderable(renderer, {
     width: "100%",
@@ -402,6 +400,7 @@ async function main() {
       let inCode: boolean = false;
       let languageLabel: null | TextRenderable = null;
       let codeLang = "";
+      let currentCodeBlock: any = null;
 
       let writeMarkDown = (content: string) => {
         let text = inCode ? `\`\`\`${content}\`\`\`` : content;
@@ -459,6 +458,7 @@ async function main() {
               const codeBlock = new CodeBlock(renderer, treeSitterClient, () =>
                 input.focus(),
               );
+              currentCodeBlock = codeBlock;
               const codeBlockDecorated = new BoxRenderable(renderer, {
                 border: true,
                 borderColor: COLORS.foreground,
@@ -499,6 +499,10 @@ async function main() {
         renderer.requestRender();
 
         if (chunk.done) {
+          // Auto-expand code block if content fits in folded view
+          if (currentCodeBlock) {
+            currentCodeBlock.onStreamComplete();
+          }
           break;
         }
       }

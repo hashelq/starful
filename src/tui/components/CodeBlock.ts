@@ -203,8 +203,13 @@ export class CodeBlock {
   setContent(content: string): void {
     this._expandedMarkdown.content = content;
     this._foldedMarkdown.content = content;
-    
-    // Count lines (excluding empty lines at start/end)
+  }
+
+  /**
+   * Called when streaming is complete - auto-expand if content fits in folded view
+   */
+  onStreamComplete(): void {
+    const content = this._expandedMarkdown.content;
     const lines = content.split('\n').filter(line => line.trim()).length;
     const maxFoldedLines = 8;
     
@@ -212,7 +217,6 @@ export class CodeBlock {
     if (lines <= maxFoldedLines) {
       this._fold.folded = false;
     }
-    // Otherwise keep folded (default state)
   }
 
   /**

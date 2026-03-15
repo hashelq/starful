@@ -1,5 +1,6 @@
 import { MarkdownRenderable, TreeSitterClient, CliRenderer, TextRenderable, BoxRenderable } from "@opentui/core";
-import { getDefaultSyntaxStyle, COLORS } from "../colors.js";
+import { getDefaultSyntaxStyle, COLORS } from "../../engine/colors.js";
+import { subscribeToThemeChanges } from "../../engine/theme.js";
 
 /**
  * Create a streaming MarkdownRenderable for chat content
@@ -9,7 +10,7 @@ export function createMarkdownRenderable(
   treeSitterClient: TreeSitterClient,
   streaming: boolean = true,
 ): MarkdownRenderable {
-  return new MarkdownRenderable(renderer, {
+  const md = new MarkdownRenderable(renderer, {
     width: "100%",
     height: "auto",
     content: "",
@@ -18,6 +19,7 @@ export function createMarkdownRenderable(
     conceal: true,
     treeSitterClient,
   });
+  return md;
 }
 
 /**
@@ -34,6 +36,12 @@ export function createThinkingElement(
     fg: COLORS.dimText,
   });
   historyContainer.add(thinkingElement);
+  
+  // Subscribe to theme changes for dimText color updates
+  subscribeToThemeChanges([
+    { renderable: thinkingElement, prop: 'fg', colorKey: 'dimText' },
+  ]);
+  
   return thinkingElement;
 }
 
@@ -44,10 +52,17 @@ export function createErrorMessage(
   renderer: CliRenderer,
   message: string,
 ): TextRenderable {
-  return new TextRenderable(renderer, {
+  const errorText = new TextRenderable(renderer, {
     content: message,
     fg: COLORS.error,
   });
+  
+  // Subscribe to theme changes for error color updates
+  subscribeToThemeChanges([
+    { renderable: errorText, prop: 'fg', colorKey: 'error' },
+  ]);
+  
+  return errorText;
 }
 
 /**

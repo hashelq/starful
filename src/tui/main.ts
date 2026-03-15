@@ -7,7 +7,6 @@ import {
   InputRenderableEvents,
   MarkdownRenderable,
   TreeSitterClient,
-  CliRenderer,
   ASCIIFontRenderable,
   parseKeypress,
   createTextAttributes,
@@ -18,11 +17,12 @@ import { CodeBlock } from "./components/CodeBlock.js";
 import { getTextInRange } from "./utils/text-buffer.js";
 import { createMarkdownRenderable, getFormattedResponse, createThinkingElement, findCodeBlockDelimiter, createErrorMessage } from "./utils/chat-helpers.js";
 import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
-import { CommandModal } from "./components/CommandModal.js";
-import { createCommandRegistry } from "./commands.js";
-import { COLORS, initColors, getDefaultSyntaxStyle } from "./colors.js";
-import { isModalOpen } from "./state.js";
-import { loadConfig } from "./config.js";
+import { createPromptModal, type PromptModal } from "./components/PromptModal.js";
+import { createCommandRegistry } from "../engine/commands/index.js";
+import { COLORS, initColors } from "../engine/colors.js";
+import { subscribeToThemeChanges } from "../engine/theme.js";
+import { TUIState } from "./state.js";
+import { loadConfig } from "../engine/config.js";
 
 // ============================================================================
 // Types
@@ -64,7 +64,6 @@ async function main() {
 
   // AGENT: Initialize colors based on theme config
   initColors();
-  console.log(1);
 
   // AGENT: Mock Ollama client instance for testing
   const ollama = new MockOllamaClient({
@@ -91,8 +90,11 @@ async function main() {
           return true; // Stop propagation
         }
         
-        // Only focus input if no modals are open
-        if (!isModalOpen()) {
+         // Global keyboard handler: only focus chat input if no modal is open
+        // This allows modals to capture keyboard events when visible
+        if (TUIState.currentInputFocused) {
+          TUIState.currentInputFocused.focus();
+        } else {
           input.focus();
         }
         return false;
@@ -110,8 +112,37 @@ async function main() {
   }
 
   // Implement command modal (Ctrl+P)
-  let commandModal: CommandModal;
+  let commandModal: PromptModal;
   {
+    // Create TUI-specific UI implementation
+    const tuiUI = {
+      promptSelect: async (options: { title: string; items: string[]; current?: string }) => {
+        return new Promise<string | null>((resolve) => {
+          const modal = createPromptModal(renderer, {
+            mode: {
+              type: "select",
+              title: options.title,
+              items: options.items,
+              current: options.current,
+            },
+            onClose: () => {
+              resolve(null);
+            },
+            onSelect: (id) => {
+              resolve(id);
+              modal.destroy();
+            },
+          });
+          renderer.root.add(modal.renderable);
+          modal.show();
+        });
+      },
+      
+      showNotification: (message: string) => {
+        notifications.show({ message });
+      },
+    };
+
     // Create command handlers
     const handleClearChat = () => {
       notifications.show({ message: "Chat cleared!" });
@@ -125,14 +156,28 @@ async function main() {
       notifications.show({ message: `Model: ${config.model}` });
     };
 
-    const registry = createCommandRegistry(renderer, {
+    // Pass UI implementation to registry (ThemeCommand will use it)
+    const registry = createCommandRegistry(renderer, tuiUI, {
       onClearChat: handleClearChat,
       onRevert: handleRevert,
       onShowModel: handleShowModel,
     });
 
-    commandModal = new CommandModal(renderer, registry, () => {
-      input.focus();
+    commandModal = createPromptModal(renderer, {
+      mode: {
+        type: "commands",
+        registry,
+      },
+      onClose: () => {
+        input.focus();
+      },
+      onSelect: (commandId) => {
+        const cmd = registry.get(commandId);
+        if (cmd) {
+          cmd.handler();
+        }
+        commandModal.close();
+      },
     });
   }
 
@@ -236,8 +281,6 @@ async function main() {
 
       let streamingMarkdownContent2Fold: MarkdownRenderable | null;
 
-      let fullResponse = "";
-
       let thinkingStarted = false;
       let thinking = "";
 
@@ -270,7 +313,6 @@ async function main() {
             "thinking",
           );
           renderer.requestRender();
-          input.focus(); // AGENT: Keep input focused after render
         }
         // Handle content phase
         if (chunk.message.content) {
@@ -283,7 +325,7 @@ async function main() {
             historyContainer.add(streamingMarkdownContent);
 
             if (thinkingStarted) {
-              fullResponse += "\n";
+              // Continuation after thinking
             }
           }
           content += chunk.message.content;
@@ -336,7 +378,6 @@ async function main() {
           writeMarkDown(content);
         }
 
-        input.focus(); // AGENT: Keep input focused after render
         renderer.requestRender();
 
         if (chunk.done) {
@@ -383,6 +424,12 @@ async function main() {
         attributes: createTextAttributes({ bold: true }),
       });
 
+      // Subscribe message colors to theme changes
+      subscribeToThemeChanges([
+        { renderable: messageText, prop: 'fg', colorKey: 'userText' },
+        { renderable: timestamp, prop: 'fg', colorKey: 'dimText' },
+      ]);
+
       messageRow.add(messageText);
       messageRow.add(timestamp);
       historyContainer.add(messageRow);
@@ -397,6 +444,11 @@ async function main() {
         fg: COLORS.assistantText,
       });
 
+      // Subscribe message colors to theme changes
+      subscribeToThemeChanges([
+        { renderable: messageText, prop: 'fg', colorKey: 'assistantText' },
+      ]);
+
       historyContainer.add(messageText);
       messages.push({ role, content, renderable: messageText });
 
@@ -407,6 +459,7 @@ async function main() {
   }
 
   // AGENT: Input field - user types prompts here, CHANGE event fires on Enter
+  // No background color when typing - clean minimalist look
   const input = new InputRenderable(renderer, {
     width: "100%",
     placeholder: "> Ask me anything...",
@@ -433,9 +486,6 @@ async function main() {
 
       // Stream the Ollama response
       await streamOllamaResponse(value, conversationHistory);
-
-      // Focus input for next message
-      setTimeout(() => input.focus(), 50);
     }
 
     return true; // Event handled
@@ -466,6 +516,21 @@ async function main() {
 
   // AGENT: Add command modal LAST so it appears on top
   renderer.root.add(commandModal.renderable);
+
+  // Subscribe all color properties to theme changes for automatic updates
+  subscribeToThemeChanges([
+    // Main container background
+    { renderable: mainContainer, prop: 'backgroundColor', colorKey: 'background' },
+    // Input colors - no background when typing
+    { renderable: input, prop: 'textColor', colorKey: 'inputText' },
+    { renderable: input, prop: 'placeholderColor', colorKey: 'placeholderText' },
+    // Figlet banner
+    { renderable: figletBanner, prop: 'color', colorKey: 'assistantText' },
+    // Title text
+    { renderable: titleText, prop: 'fg', colorKey: 'dimText' },
+    // History container (if has background)
+    { renderable: historyContainer, prop: 'backgroundColor', colorKey: 'background' },
+  ]);
 
   // AGENT: Start render loop - blocks until process exits
   renderer.auto();

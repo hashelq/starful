@@ -3,8 +3,9 @@ import {
   TextRenderable,
   createTextAttributes,
 } from "@opentui/core";
-import type { RenderContext, CliRenderer } from "@opentui/core";
-import { COLORS } from "../colors.js";
+import type { RenderContext } from "@opentui/core";
+import { COLORS } from "../../engine/colors.js";
+import { subscribeToThemeChanges } from "../../engine/theme.js";
 
 export type NotificationType = "info" | "success" | "error" | "warning";
 
@@ -23,17 +24,16 @@ export interface NotificationOptions {
  * NotificationsOverlay - Displays stacked toast notifications
  */
 export class NotificationsOverlay extends BoxRenderable {
-  private notifications: BoxRenderable[] = [];
+  private notifications: { box: BoxRenderable; icon: TextRenderable; message: TextRenderable; type: NotificationType }[] = [];
 
-  private NOTIFICATION_COLORS: Record<
-    NotificationType,
-    { fg: string; bg: string; icon: string }
-  > = {
-    info: { fg: COLORS.primary, bg: COLORS.background, icon: "ℹ" },
-    success: { fg: COLORS.success, bg: COLORS.surface, icon: "✓" },
-    error: { fg: COLORS.error, bg: COLORS.surface, icon: "✗" },
-    warning: { fg: COLORS.warning, bg: COLORS.surface, icon: "⚠" },
-  };
+  private _getNotificationColors(type: NotificationType) {
+    switch (type) {
+      case "info": return { fg: COLORS.primary, bg: COLORS.background, icon: "ℹ" };
+      case "success": return { fg: COLORS.success, bg: COLORS.surface, icon: "✓" };
+      case "error": return { fg: COLORS.error, bg: COLORS.surface, icon: "✗" };
+      case "warning": return { fg: COLORS.warning, bg: COLORS.surface, icon: "⚠" };
+    }
+  }
 
   constructor(
     public renderer: RenderContext,
@@ -44,13 +44,17 @@ export class NotificationsOverlay extends BoxRenderable {
       maxWidth: "80%",
       height: "auto",
       flexDirection: "column",
-      gap: 1,
       position: "absolute",
       right: 1,
       top: options?.position === "bottom" ? undefined : 1,
       bottom: options?.position === "bottom" ? 1 : undefined,
       zIndex: 9999,
     });
+    
+    // Subscribe to theme changes to update existing notification colors
+    subscribeToThemeChanges([
+      { renderable: this, prop: 'backgroundColor', colorKey: 'surface' },
+    ]);
   }
 
   /**
@@ -58,7 +62,7 @@ export class NotificationsOverlay extends BoxRenderable {
    */
   show(options: NotificationOptions): void {
     const type = options.type || "info";
-    const colors = this.NOTIFICATION_COLORS[type];
+    const colors = this._getNotificationColors(type);
     const timeout = options.timeout ?? 3000;
     const ctx = (this as any)._ctx as RenderContext;
 
@@ -71,6 +75,8 @@ export class NotificationsOverlay extends BoxRenderable {
       marginBottom: 0,
       flexDirection: "row",
       gap: 1,
+      paddingY: 1,
+      paddingX: 2,
       alignItems: "center",
     });
 
@@ -90,7 +96,14 @@ export class NotificationsOverlay extends BoxRenderable {
     notification.add(icon);
     notification.add(message);
     super.add(notification);
-    this.notifications.push(notification);
+    this.notifications.push({ box: notification, icon, message, type });
+
+    // Subscribe this specific notification to theme changes
+    subscribeToThemeChanges([
+      { renderable: notification, prop: 'backgroundColor', colorKey: type === 'info' ? 'background' : 'surface' },
+      { renderable: icon, prop: 'fg', colorKey: type },
+      { renderable: message, prop: 'fg', colorKey: type },
+    ]);
 
     // Request render
     this.renderer.requestRender?.();
@@ -108,7 +121,7 @@ export class NotificationsOverlay extends BoxRenderable {
    * Dismiss a specific notification
    */
   dismiss(notification: BoxRenderable): void {
-    const index = this.notifications.indexOf(notification);
+    const index = this.notifications.findIndex(n => n.box === notification);
     if (index !== -1) {
       this.remove(notification.id);
       this.notifications.splice(index, 1);
@@ -121,7 +134,7 @@ export class NotificationsOverlay extends BoxRenderable {
    */
   clear(): void {
     for (const n of this.notifications) {
-      this.remove(n.id);
+      this.remove(n.box.id);
     }
     this.notifications = [];
     this.renderer.requestRender?.();

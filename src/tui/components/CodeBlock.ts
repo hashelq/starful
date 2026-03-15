@@ -8,7 +8,8 @@ import {
   CliRenderer,
 } from "@opentui/core";
 import { FoldableBox } from "./FoldableBox.js";
-import { COLORS, getDefaultSyntaxStyle } from "../colors.js";
+import { COLORS, getDefaultSyntaxStyle } from "../../engine/colors.js";
+import { subscribeToThemeChanges } from "../../engine/theme.js";
 
 /**
  * CodeBlock - A collapsible code block component with:
@@ -29,9 +30,6 @@ export class CodeBlock {
   private _treeSitterClient: TreeSitterClient;
   private _inputFocus: () => void;
 
-  /**
-   * Create a new CodeBlock component
-   */
   constructor(
     renderer: CliRenderer,
     treeSitterClient: TreeSitterClient,
@@ -41,15 +39,16 @@ export class CodeBlock {
     this._treeSitterClient = treeSitterClient;
     this._inputFocus = inputFocus;
 
-    // Create the outer gray box
+    // Create the outer gray box - no border, uses surfaceAlt background
     this._codeBox = new BoxRenderable(renderer, {
       width: "100%",
       height: "auto",
-      backgroundColor: COLORS.codeBackground,
+      backgroundColor: COLORS.surfaceAlt,
       paddingX: 1,
+      border: false,
     });
 
-    // Create top bar with language label and copy button
+    // Create top bar with language label and copy button  
     const topBar = this._createTopBar();
 
     // Create markdown renderables for expanded and folded views
@@ -78,9 +77,9 @@ export class CodeBlock {
 
     const label = new TextRenderable(renderer, {
       content: "Scroll or click to expand.",
-      attributes: createTextAttributes({bold: true}),
+      attributes: createTextAttributes({ bold: true }),
       flexDirection: "column",
-      fg: COLORS.foreground
+      fg: COLORS.foreground,
     });
 
     vC.add(foldedScroll);
@@ -94,6 +93,14 @@ export class CodeBlock {
     // Assemble the component
     this._codeBox.add(topBar);
     this._codeBox.add(this._fold);
+
+    // Subscribe all color properties to theme changes for automatic updates  
+    subscribeToThemeChanges([
+      { renderable: this._codeBox, prop: 'backgroundColor', colorKey: 'surfaceAlt' },
+      { renderable: this._languageLabel, prop: 'fg', colorKey: 'languageLabel' },
+      { renderable: this._copyButton, prop: 'bg', colorKey: 'copyButtonBg' },
+      { renderable: this._copyButton, prop: 'fg', colorKey: 'copyButtonText' },
+    ]);
   }
 
   /**
@@ -159,7 +166,7 @@ export class CodeBlock {
     const content = this._expandedMarkdown.content;
     if (!content) return;
 
-    // Strip markdown code fences
+    // Strip markdown code fences  
     let code = content;
     code = code.replace(/^```\w*\n?/, "");
     code = code.replace(/```$/, "");

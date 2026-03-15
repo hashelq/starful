@@ -3,8 +3,9 @@ import {
   TextRenderable,
   createTextAttributes,
 } from "@opentui/core";
-import type { RenderContext, Renderable, CliRenderer } from "@opentui/core";
-import { COLORS } from "../colors.js";
+import type { RenderContext, Renderable } from "@opentui/core";
+import { COLORS } from "../../engine/colors.js";
+import { subscribeToThemeChanges } from "../../engine/theme.js";
 
 export interface FoldableBoxOptions {
   /** Initial folded state */
@@ -12,7 +13,7 @@ export interface FoldableBoxOptions {
   /** Title/header shown when folded */
   foldTitle?: string;
   /** Color for the fold indicator */
-  foldColor?: string;
+  foldColor?: keyof typeof COLORS | string;
   /** How to show collapse button: "section" (default), "button", or false to hide */
   collapseButton?: "section" | "button" | false;
   /** Button text when collapseButton is "button" */
@@ -30,7 +31,7 @@ export interface FoldableBoxOptions {
 export class FoldableBox extends BoxRenderable {
   private _folded: boolean;
   private _foldTitle: string;
-  private _foldColor: string;
+  private _foldColorKey: keyof typeof COLORS | null; // Store the color key theming
   private _collapseButton: "section" | "button" | false;
   private _collapseButtonText: string;
   private _expandOnly: boolean;
@@ -52,13 +53,32 @@ export class FoldableBox extends BoxRenderable {
 
     this._folded = options.folded ?? true;
     this._foldTitle = options.foldTitle ?? "Click to expand";
-    this._foldColor = options.foldColor ?? COLORS.accent;
+    
+    // Determine if using a theme key or hardcoded color
+    if (typeof options.foldColor === 'string') {
+      const paletteKeys = Object.keys(COLORS) as Array<keyof typeof COLORS>;
+      if (paletteKeys.includes(options.foldColor as any)) {
+        this._foldColorKey = options.foldColor as keyof typeof COLORS;
+      } else {
+        this._foldColorKey = null; // Hardcoded color value passed in
+      }
+    } else {
+      this._foldColorKey = "accent"; // Default to accent theme key
+    }
+    
     this._collapseButton = options.collapseButton ?? "section";
     this._collapseButtonText = options.collapseButtonText ?? "▲ Collapse";
     this._expandOnly = options.expandOnly ?? false;
 
     // Create header/button based on collapseButton option
     this._createCollapseControl(ctx);
+    
+    // Subscribe to theme changes for dynamic color updates
+    if (this._foldColorKey && this._header) {
+      subscribeToThemeChanges([
+        { renderable: this._header, prop: 'fg', colorKey: this._foldColorKey },
+      ]);
+    }
 
     // Track mouse down position to detect selection vs click
     this.onMouseDown = (event: any) => {
@@ -85,9 +105,11 @@ export class FoldableBox extends BoxRenderable {
   private _createCollapseControl(ctx: RenderContext): void {
     if (this._collapseButton === "section") {
       // Create header with fold indicator
+      const fgColor = this._foldColorKey ? COLORS[this._foldColorKey] : COLORS.accent;
+      
       this._header = new TextRenderable(ctx, {
         content: this._getHeaderContent(),
-        fg: this._foldColor,
+        fg: fgColor,
         attributes: createTextAttributes({ bold: true }),
       });
       super.add(this._header);

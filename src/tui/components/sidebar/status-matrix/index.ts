@@ -1,7 +1,7 @@
 import { BoxRenderable, CliRenderer, TextRenderable } from "@opentui/core";
 import { COLORS } from "../../../../engine/colors.js";
 import { subscribeToThemeChanges } from "../../../../engine/theme.js";
-import { Animation, WaveAnimation, RainAnimation, NoiseAnimation } from "./animations/index.js";
+import { Animation, WaveAnimation, RainAnimation, NoiseAnimation, PulseAnimation, SpiralAnimation, GradientAnimation } from "./animations/index.js";
 
 /**
  * StatusMatrix - Animated ASCII matrix at the bottom of sidebar
@@ -28,6 +28,9 @@ export class StatusMatrix {
       new WaveAnimation(),
       new RainAnimation(),
       new NoiseAnimation(),
+      new PulseAnimation(),
+      new SpiralAnimation(),
+      new GradientAnimation(),
     ];
     
     // Calculate grid size (1 y ≈ 1.5 x)

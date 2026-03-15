@@ -193,6 +193,7 @@ export class PromptModal {
       height: "auto",
       flexDirection: "column",
       gap: 0,
+      alignItems: "stretch",
     });
 
     this._scrollBox.add(this._itemsContainer);

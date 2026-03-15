@@ -83,6 +83,13 @@ import {
   SpaceInvaderAnimation,
   StarfieldAnimation,
   AsteroidsAnimation,
+  // Additional
+  PacmanAnimation,
+  BreakoutAnimation,
+  GameOfLifeAnimation,
+  MandelbrotAnimation,
+  PulseRingsAnimation,
+  LissajousAnimation,
 } from "./animations/index.js";
 
 /**
@@ -199,6 +206,13 @@ export class StatusMatrix {
       new SpaceInvaderAnimation(),
       new StarfieldAnimation(),
       new AsteroidsAnimation(),
+      // Additional
+      new PacmanAnimation(),
+      new BreakoutAnimation(),
+      new GameOfLifeAnimation(),
+      new MandelbrotAnimation(),
+      new PulseRingsAnimation(),
+      new LissajousAnimation(),
     ];
     
     // Calculate grid size (1 y ≈ 1.5 x)

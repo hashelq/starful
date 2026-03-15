@@ -86,3 +86,11 @@ export { SnakeAnimation } from "./snake.js";
 export { SpaceInvaderAnimation } from "./spaceinvader.js";
 export { StarfieldAnimation } from "./starfield.js";
 export { AsteroidsAnimation } from "./asteroids.js";
+
+// Additional animations
+export { PacmanAnimation } from "./pacman.js";
+export { BreakoutAnimation } from "./breakout.js";
+export { GameOfLifeAnimation } from "./gameoflife.js";
+export { MandelbrotAnimation } from "./mandelbrot.js";
+export { PulseRingsAnimation } from "./heart.js";
+export { LissajousAnimation } from "./lissajous.js";

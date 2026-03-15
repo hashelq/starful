@@ -13,10 +13,10 @@ import { subscribeToThemeChanges } from "../../engine/theme.js";
  */
 class PaneButton {
   private _button: BoxRenderable;
-  private _icon: TextRenderable;
   private _label: TextRenderable;
   private _onClick?: () => void;
   private _selected: boolean = false;
+  private _renderer: CliRenderer;
 
   constructor(
     renderer: CliRenderer,
@@ -26,6 +26,7 @@ class PaneButton {
       onClick?: () => void;
     },
   ) {
+    this._renderer = renderer;
     this._onClick = options.onClick;
 
     // Button container
@@ -34,29 +35,33 @@ class PaneButton {
       height: 1,
       flexDirection: "row",
       alignItems: "center",
-      gap: 1,
+      justifyContent: "center",
       paddingX: 1,
       paddingY: 0,
     });
 
-    // Icon
-    this._icon = new TextRenderable(renderer, {
-      content: options.icon,
-      fg: COLORS.text,
-    });
-
-    // Label
+    // Label only (no icon)
     this._label = new TextRenderable(renderer, {
       content: options.label,
       fg: COLORS.text,
     });
 
-    this._button.add(this._icon);
     this._button.add(this._label);
 
     // Click handler
     this._button.onMouseUp = () => {
       this._onClick?.();
+    };
+
+    // Hover effect
+    this._button.onMouseOver = () => {
+      this._button.backgroundColor = COLORS.surfaceAlt;
+      this._renderer.requestRender?.();
+    };
+
+    this._button.onMouseOut = () => {
+      this._button.backgroundColor = this._selected ? COLORS.primary : "transparent";
+      this._renderer.requestRender?.();
     };
   }
 
@@ -67,7 +72,6 @@ class PaneButton {
   setSelected(selected: boolean): void {
     this._selected = selected;
     this._button.backgroundColor = selected ? COLORS.primary : "transparent";
-    this._icon.fg = selected ? COLORS.background : COLORS.text;
     this._label.fg = selected ? COLORS.background : COLORS.text;
   }
 }

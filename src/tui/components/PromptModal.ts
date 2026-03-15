@@ -89,6 +89,7 @@ export class PromptModal {
   private _selectedIndex: number = 0;
   private _visible: boolean = false;
   private _shadowBox: BoxRenderable;
+  private _leftBar: BoxRenderable;
 
   // AGENT: The fuzzy search happen automatically whenever user presses a key inside the input field. Be careful when changing this code.
   constructor(renderer: CliRenderer, options: PromptModalOptions) {
@@ -136,11 +137,19 @@ export class PromptModal {
       height: "auto",
       backgroundColor: COLORS.background,
       padding: 1,
-      border: true,
-      borderStyle: "rounded",
-      borderColor: COLORS.primary,
     });
     centerWrapper.add(this._shadowBox);
+
+    // Left accent bar (colored vertical line)
+    this._leftBar = new BoxRenderable(renderer, {
+      width: 1,
+      height: "100%",
+      backgroundColor: COLORS.primary,
+      position: "absolute",
+      left: 0,
+      top: 0,
+    });
+    this._shadowBox.add(this._leftBar);
 
     // Modal box
     this._modalBox = new BoxRenderable(renderer, {
@@ -217,7 +226,7 @@ export class PromptModal {
       { renderable: this._searchInput, prop: 'textColor', colorKey: 'textInput' },
       { renderable: this._searchInput, prop: 'placeholderColor', colorKey: 'textInput' },
       { renderable: this._searchInput, prop: 'backgroundColor', colorKey: 'surface' },
-      { renderable: this._shadowBox, prop: 'borderColor', colorKey: 'primary' },
+      { renderable: this._leftBar, prop: 'backgroundColor', colorKey: 'primary' },
     ]);
 
     // Hide border on narrow terminals (< 70 chars) and update on resize
@@ -235,8 +244,10 @@ export class PromptModal {
    */
   private _updateBorderVisibility(): void {
     const terminalWidth = (this._renderer as any).terminalWidth || 80;
-    // Hide border if terminal is less than 70 characters wide
-    this._shadowBox.border = terminalWidth >= 70;
+    // Hide left bar if terminal is less than 70 characters wide
+    if (this._leftBar) {
+      this._leftBar.visible = terminalWidth >= 70;
+    }
     this._renderer.requestRender?.();
   }
 

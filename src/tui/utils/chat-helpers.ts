@@ -1,4 +1,10 @@
-import { MarkdownRenderable, TreeSitterClient, CliRenderer, TextRenderable, BoxRenderable } from "@opentui/core";
+import {
+  MarkdownRenderable,
+  TreeSitterClient,
+  CliRenderer,
+  TextRenderable,
+  BoxRenderable,
+} from "@opentui/core";
 import { getDefaultSyntaxStyle, COLORS } from "../../engine/colors.js";
 import { subscribeToThemeChanges } from "../../engine/theme.js";
 
@@ -36,12 +42,12 @@ export function createThinkingElement(
     fg: COLORS.dimText,
   });
   historyContainer.add(thinkingElement);
-  
+
   // Subscribe to theme changes for dimText color updates
   subscribeToThemeChanges([
-    { renderable: thinkingElement, prop: 'fg', colorKey: 'dimText' },
+    { renderable: thinkingElement, prop: "fg", colorKey: "dimText" },
   ]);
-  
+
   return thinkingElement;
 }
 
@@ -56,12 +62,12 @@ export function createErrorMessage(
     content: message,
     fg: COLORS.error,
   });
-  
+
   // Subscribe to theme changes for error color updates
   subscribeToThemeChanges([
-    { renderable: errorText, prop: 'fg', colorKey: 'error' },
+    { renderable: errorText, prop: "fg", colorKey: "error" },
   ]);
-  
+
   return errorText;
 }
 
@@ -70,7 +76,9 @@ export function createErrorMessage(
  * Returns the index or -1 if not found
  */
 export function findCodeBlockDelimiter(content: string): number {
-  return content.lastIndexOf("```");
+  if (content.startsWith("```")) return 0;
+  let i = content.lastIndexOf("\n```");
+  return i === -1 ? i : i + 1;
 }
 
 /**

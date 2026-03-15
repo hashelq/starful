@@ -38,6 +38,7 @@ import { getTheme as getThemeFromConfig } from "../engine/ui-config.js";
 import { subscribeToThemeChanges } from "../engine/theme.js";
 import { TUIState } from "./state.js";
 import { loadConfig } from "../engine/config.js";
+import { MockOllamaClient } from "../llm/implementations/mock-ollama-client.js";
 
 // ============================================================================
 // Types

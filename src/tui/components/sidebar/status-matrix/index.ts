@@ -124,6 +124,9 @@ export class StatusMatrix {
   // Randomly select a color on initialization
   private selectedColor: Color = StatusMatrix.ANIMATION_COLORS[Math.floor(Math.random() * StatusMatrix.ANIMATION_COLORS.length)] as Color;
   
+  // Second color for temperature effect
+  private temperatureColor: Color = StatusMatrix.ANIMATION_COLORS[Math.floor(Math.random() * StatusMatrix.ANIMATION_COLORS.length)] as Color;
+  
   // Timing constants
   private static readonly IDLE_CYCLE_MS = 10000;
   private static readonly GENERATING_CYCLE_MS = 1000;
@@ -335,6 +338,7 @@ export class StatusMatrix {
       } while (newIndex === this._currentAnimIndex && this._animations.length > 1);
       this._currentAnimIndex = newIndex;
       this.selectedColor = StatusMatrix.ANIMATION_COLORS[Math.floor(Math.random() * StatusMatrix.ANIMATION_COLORS.length)] as Color;
+      this.temperatureColor = StatusMatrix.ANIMATION_COLORS[Math.floor(Math.random() * StatusMatrix.ANIMATION_COLORS.length)] as Color;
       this._updateLabel();
       
       // Set next cycle interval based on generating state
@@ -410,7 +414,7 @@ export class StatusMatrix {
           if (frame.intensity > 7) {
             cell.fg = this.selectedColor;
           } else if (frame.intensity > 4) {
-            cell.fg = COLORS.text;
+            cell.fg = this.temperatureColor;
           } else {
             cell.fg = COLORS.textMuted;
           }

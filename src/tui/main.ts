@@ -422,8 +422,11 @@ async function main() {
     } catch (error) {
       // Check if this was an abort (Ctrl+C)
       if (error instanceof Error && error.name === "AbortError") {
-        // User cancelled - don't show error, just add a note
-        if (contentStarted || thinkingStarted) {
+        // User cancelled - don't show error, just add a note if we started streaming
+        const hadContent = typeof contentStarted !== "undefined" && contentStarted;
+        const hadThinking = typeof thinkingStarted !== "undefined" && thinkingStarted;
+        
+        if (hadContent || hadThinking) {
           const cancelMsg = createErrorMessage(
             renderer,
             "[Cancelled]",
@@ -431,6 +434,7 @@ async function main() {
           cancelMsg.fg = COLORS.textMuted; // Make it look like a muted message
           historyContainer.add(cancelMsg);
         }
+        // If nothing started yet, just silently cancel
       } else {
         // Real error - show it
         const errorMsg = createErrorMessage(

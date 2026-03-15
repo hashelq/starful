@@ -136,14 +136,19 @@ export class PromptInput {
     // Input changes - update search
     this.input.on(InputRenderableEvents.CHANGE, (value: string) => {
       const history = getPromptHistory();
-      if (history.isSearching) {
-        if (value) {
+      
+      if (value) {
+        // Start or update search mode when typing
+        if (history.isSearching) {
           history.updateSearch(value);
-          this._searchSuggestions.show(value, history.getSearchMatches());
         } else {
-          history.resetSearch();
-          this._searchSuggestions.hide();
+          history.startSearch(value);
         }
+        this._searchSuggestions.show(value, history.getSearchMatches());
+      } else {
+        // Empty input - reset search
+        history.resetSearch();
+        this._searchSuggestions.hide();
       }
     });
     
@@ -159,6 +164,9 @@ export class PromptInput {
       // Reset search
       getPromptHistory().resetSearch();
       this._searchSuggestions.hide();
+      
+      // Clear the input field
+      this.input.value = "";
       
       // Submit
       if (value) {

@@ -25,7 +25,7 @@ class PaneButton {
     // Button container
     this._button = new BoxRenderable(renderer, {
       width: "100%",
-      height: 2,
+      height: 1,
       flexDirection: "row",
       alignItems: "center",
       gap: 1,
@@ -119,6 +119,18 @@ class PaneSection {
     // Header click toggles fold
     this._headerBox.onMouseUp = () => {
       this.toggle();
+    };
+
+    // Header hover effect - brighter background
+    this._headerBox.onMouseOver = () => {
+      this._headerBox.backgroundColor = COLORS.buttonBg;
+      this._renderer.requestRender?.();
+    };
+
+    this._headerBox.onMouseOut = () => {
+      // Restore based on folded state
+      this._headerBox.backgroundColor = this._folded ? COLORS.surfaceAlt : COLORS.buttonBg;
+      this._renderer.requestRender?.();
     };
 
     // Buttons container

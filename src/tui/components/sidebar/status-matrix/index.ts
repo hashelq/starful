@@ -1,4 +1,4 @@
-import { BoxRenderable, CliRenderer, TextRenderable } from "@opentui/core";
+import { BoxRenderable, CliRenderer, createTextAttributes, TextRenderable } from "@opentui/core";
 import { COLORS } from "../../../../engine/colors.js";
 import { subscribeToThemeChanges } from "../../../../engine/theme.js";
 import {
@@ -284,6 +284,7 @@ export class StatusMatrix {
     for (let x = 0; x < versionText.length; x++) {
       const cell = new TextRenderable(renderer, {
         content: versionText[x],
+        attributes: createTextAttributes({bold: true}),
         fg: COLORS.text,
       });
       this._versionRow.push(cell);

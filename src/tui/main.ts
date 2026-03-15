@@ -33,7 +33,7 @@ import {
   createCommandRegistry,
   type CommandRegistry,
 } from "../engine/commands/index.js";
-import { COLORS, initColors } from "../engine/colors.js";
+import { COLORS, initColors, getDefaultSyntaxStyle } from "../engine/colors.js";
 import { getTheme as getThemeFromConfig, isCentered, getCenteredWidth } from "../engine/ui-config.js";
 import { subscribeToThemeChanges } from "../engine/theme.js";
 import { TUIState } from "./state.js";
@@ -368,11 +368,34 @@ async function main() {
   // Add to history container so they scroll with messages
   historyContainer.add(bannerContainer);
 
-  // Add welcome message
-  addStaticMessage(
-    "assistant",
-    "Welcome! The modal knows about Starful's configuration system. Try: /theme, /model, or toggle centered mode via Ctrl+P. You can also use the AI to read/edit files, run commands, and more.",
-  );
+  // Add welcome message as markdown
+  const welcomeMessage = `## Welcome to Starful
+
+Your AI-powered terminal IDE. Here's what you can do:
+
+### Quick Commands
+- \`/theme\` - Switch color themes
+- \`/model\` - Change AI model  
+- \`/clear\` - Clear chat history
+
+### AI Capabilities
+- **File operations**: Read, write, edit files
+- **Shell commands**: Run terminal commands
+- **Code assistance**: Ask coding questions
+
+> **Tip**: Press \`Ctrl+P\` to open the command palette
+
+Start by asking me something!`;
+
+  const welcomeMarkdown = new MarkdownRenderable(renderer, {
+    width: "100%",
+    height: "auto",
+    content: welcomeMessage,
+    syntaxStyle: getDefaultSyntaxStyle(),
+    conceal: true,
+    treeSitterClient,
+  });
+  historyContainer.add(welcomeMarkdown);
 
   // AGENT: ScrollBox wraps history container - enables vertical scrolling for long chats
   const scrollBox = new ScrollBoxRenderable(renderer, {

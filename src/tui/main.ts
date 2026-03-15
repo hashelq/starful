@@ -523,6 +523,21 @@ async function main() {
     textColor: COLORS.inputText,
     placeholderColor: COLORS.placeholderText,
   });
+  
+  // Handle key events directly on the input
+  input.onKeyDown = (key) => {
+    // Handle Ctrl+C - cancel stream if generating, else consume to prevent exit
+    if (key.ctrl && key.name === "c") {
+      if (isGenerating && currentAbortController) {
+        currentAbortController.abort();
+        notifications.show({ message: "Stream cancelled", type: "info" });
+      }
+      // Always consume Ctrl+C to prevent exit
+      return true;
+    }
+    return false;
+  };
+  
   input.on(InputRenderableEvents.ENTER, async (val) => {
     const value = val.trim();
 

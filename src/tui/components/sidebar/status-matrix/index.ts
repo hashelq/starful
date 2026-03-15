@@ -5,23 +5,34 @@ import { Animation, WaveAnimation, RainAnimation, NoiseAnimation, PulseAnimation
 
 /**
  * StatusMatrix - Animated ASCII matrix at the bottom of sidebar
- * Cycles through different animations every 3 seconds
+ * Cycles through different animations randomly
+ * - Slow cycle (10s) when idle
+ * - Fast cycle (1s) when generating
  */
 export class StatusMatrix {
   private _container: BoxRenderable;
   private _renderer: CliRenderer;
   private _grid: TextRenderable[][] = [];
   private _animations: Animation[] = [];
-  private _currentAnimIndex = 0;
   private _tick = 0;
-  private _interval: any = null;
+  private _animationInterval: any = null;
   private _cycleInterval: any = null;
+  private _isGeneratingFn: () => boolean;
+  private _currentAnimIndex = 0;
+  private _lastAnimIndex = -1;
+  
+  // Timing constants
+  private static readonly IDLE_CYCLE_MS = 10000;
+  private static readonly GENERATING_CYCLE_MS = 1000;
+  private static readonly IDLE_TICK_MS = 80;
+  private static readonly GENERATING_TICK_MS = 40;
   
   // Character set for intensity mapping
   private _chars = " .·:;+*#@";
   
-  constructor(renderer: CliRenderer, width: number) {
+  constructor(renderer: CliRenderer, width: number, options?: { isGeneratingFn?: () => boolean }) {
     this._renderer = renderer;
+    this._isGeneratingFn = options?.isGeneratingFn ?? (() => false);
     
     // Initialize animations
     this._animations = [
@@ -75,14 +86,50 @@ export class StatusMatrix {
     // Start animation loop
     this._startAnimation(gridWidth, gridHeight);
     
-    // Cycle animations every 3 seconds
-    this._cycleInterval = setInterval(() => {
-      this._currentAnimIndex = (this._currentAnimIndex + 1) % this._animations.length;
-    }, 3000);
+    // Start cycling - will be adjusted based on generating state
+    this._startCycling();
+  }
+  
+  private _getRandomAnimIndex(): number {
+    // Pick a random index different from the current one
+    let newIndex;
+    do {
+      newIndex = Math.floor(Math.random() * this._animations.length);
+    } while (newIndex === this._currentAnimIndex && this._animations.length > 1);
+    return newIndex;
+  }
+  
+  private _startCycling(): void {
+    // Initial random animation
+    this._currentAnimIndex = this._getRandomAnimIndex();
+    
+    const cycle = () => {
+      const isGenerating = this._isGeneratingFn();
+      
+      // Pick a new random animation
+      this._currentAnimIndex = this._getRandomAnimIndex();
+      
+      // Set next cycle interval based on generating state
+      const interval = isGenerating 
+        ? StatusMatrix.GENERATING_CYCLE_MS 
+        : StatusMatrix.IDLE_CYCLE_MS;
+      
+      this._cycleInterval = setTimeout(cycle, interval);
+    };
+    
+    // Start with initial delay
+    this._cycleInterval = setTimeout(cycle, StatusMatrix.IDLE_CYCLE_MS);
   }
   
   private _startAnimation(width: number, height: number): void {
-    this._interval = setInterval(() => {
+    const animate = () => {
+      const isGenerating = this._isGeneratingFn();
+      
+      // Faster tick when generating
+      const tickMs = isGenerating 
+        ? StatusMatrix.GENERATING_TICK_MS 
+        : StatusMatrix.IDLE_TICK_MS;
+      
       this._tick++;
       
       const anim = this._animations[this._currentAnimIndex];
@@ -112,7 +159,10 @@ export class StatusMatrix {
       }
       
       this._renderer.requestRender?.();
-    }, 80);
+      this._animationInterval = setTimeout(animate, tickMs);
+    };
+    
+    animate();
   }
   
   get renderable(): BoxRenderable {
@@ -120,7 +170,7 @@ export class StatusMatrix {
   }
   
   destroy(): void {
-    if (this._interval) clearInterval(this._interval);
-    if (this._cycleInterval) clearInterval(this._cycleInterval);
+    if (this._animationInterval) clearTimeout(this._animationInterval);
+    if (this._cycleInterval) clearTimeout(this._cycleInterval);
   }
 }

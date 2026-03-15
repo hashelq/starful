@@ -26,6 +26,7 @@ export class SideBar {
       width?: number;
       threshold?: number;
       onNavigate?: (section: string) => void;
+      isGeneratingFn?: () => boolean;
     }
   ) {
     this._renderer = renderer;
@@ -60,7 +61,7 @@ export class SideBar {
     this._pane.add(this._scrollBox);
 
     // Create animated status matrix at bottom of sidebar
-    const statusMatrix = new StatusMatrix(renderer, this._width);
+    const statusMatrix = new StatusMatrix(renderer, this._width, { isGeneratingFn: options?.isGeneratingFn });
     this._pane.add(statusMatrix.renderable);
 
     // Build categories from registry

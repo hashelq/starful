@@ -101,9 +101,11 @@ async function main() {
   });
   await treeSitterClient.initialize();
 
-  // AGENT: App state - message history and generation lock
+  // AGENT: App state - message history and generation state
+  const appState: { isGenerating: boolean } = {
+    isGenerating: false,
+  };
   const messages: Message[] = [];
-  let isGenerating = false;
   let currentAbortController: AbortController | null = null;
 
   // AGENT: Load configuration
@@ -133,7 +135,7 @@ async function main() {
 
         // Check for Ctrl+C - cancel ongoing stream
         if (key && key.ctrl && key.name === "c") {
-          if (isGenerating && currentAbortController) {
+          if (appState.isGenerating && currentAbortController) {
             currentAbortController.abort();
             notifications.show({ message: "Stream cancelled", type: "info" });
             return true; // Stop propagation
@@ -359,8 +361,8 @@ async function main() {
     prompt: string,
     conversationHistory: Array<{ role: "user" | "assistant"; content: string }>,
   ): Promise<void> {
-    if (isGenerating) return;
-    isGenerating = true;
+    if (appState.isGenerating) return;
+    appState.isGenerating = true;
 
     try {
       // Prepare messages with system behavior injection
@@ -532,7 +534,7 @@ async function main() {
         historyContainer.add(errorMsg);
       }
     } finally {
-      isGenerating = false;
+      appState.isGenerating = false;
       currentAbortController = null;
     }
   }
@@ -637,7 +639,7 @@ async function main() {
 
     // Handle Ctrl+C - cancel stream if generating, else consume to prevent exit
     if (key.ctrl && key.name === "c") {
-      if (isGenerating && currentAbortController) {
+      if (appState.isGenerating && currentAbortController) {
         currentAbortController.abort();
         notifications.show({ message: "Stream cancelled", type: "info" });
       } else {
@@ -652,7 +654,7 @@ async function main() {
   input.on(InputRenderableEvents.ENTER, async (val) => {
     const value = val.trim();
 
-    if (value && !isGenerating) {
+    if (value && !appState.isGenerating) {
       // Add user message to history
       addStaticMessage("user", ` ${value}`);
 
@@ -698,6 +700,7 @@ async function main() {
     onNavigate: (section: string) => {
       notifications.show({ message: `Navigate to: ${section}`, type: "info" });
     },
+    isGeneratingFn: () => appState.isGenerating,
   });
 
   // Content container for the column layout (figlet, scrollbox, input)

@@ -21,6 +21,7 @@ import {
   createErrorMessage,
 } from "./utils/chat-helpers.js";
 import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
+import { SearchSuggestionsOverlay } from "./components/SearchSuggestionsOverlay.js";
 import {
   createPromptModal,
   type PromptModal,
@@ -185,6 +186,13 @@ async function main() {
       position: "top",
     });
     renderer.root.add(notifications);
+  }
+
+  // Implement search suggestions overlay
+  let searchSuggestions: SearchSuggestionsOverlay;
+  {
+    searchSuggestions = new SearchSuggestionsOverlay(renderer);
+    renderer.root.add(searchSuggestions);
   }
 
   // Implement command modal (Ctrl+P)
@@ -653,6 +661,7 @@ async function main() {
     // Handle Escape - exit search mode
     if (key.name === "escape") {
       getPromptHistory().resetSearch();
+      searchSuggestions.hide();
       return false;
     }
 
@@ -663,29 +672,34 @@ async function main() {
       const history = getPromptHistory();
       
       // If in cycling mode or search mode, continue that mode
-      if (history.isCycling) {
+      if (history.isCycling || input.value === "") {
         // Continue cycling through history (normal mode)
         const prev = history.previous();
         if (prev) {
           input.value = prev;
         }
       } else if (history.isSearching) {
-        // Continue searching
-        const prev = history.searchPrevious();
-        if (prev) {
-          input.value = prev;
+        // Continue searching - update selection
+        history.searchPrevious();
+        const result = history.getCurrentSearchResult();
+        if (result) {
+          input.value = result;
         }
+        // Update suggestions overlay
+        searchSuggestions.selectPrevious();
       } else if (input.value) {
         // Start search mode with current input as prefix
         const result = history.startSearch(input.value);
         if (result) {
           input.value = result;
         }
-      } else {
-        // Empty input - start normal cycling
-        const prev = history.previous();
-        if (prev) {
-          input.value = prev;
+        // Show suggestions overlay
+        // Get input position from the renderable
+        const inputPos = (input as any)._layout;
+        if (inputPos) {
+          searchSuggestions.show(input.value, history.getSearchMatches(), inputPos.x ?? 0, inputPos.y ?? 0);
+        } else {
+          searchSuggestions.show(input.value, history.getSearchMatches(), 0, 0);
         }
       }
       return true;
@@ -699,9 +713,12 @@ async function main() {
         const next = history.next();
         input.value = next;
       } else if (history.isSearching) {
-        const next = history.searchNext();
-        // Keep search mode even if empty - user can continue searching
-        input.value = next || history.getCurrentSearchResult() || "";
+        // Continue searching - update selection
+        history.searchNext();
+        const result = history.getCurrentSearchResult();
+        input.value = result || history.getCurrentSearchResult() || "";
+        // Update suggestions overlay
+        searchSuggestions.selectNext();
       } else if (input.value) {
         // Normal next mode (not cycling yet)
         const next = history.next();
@@ -733,8 +750,16 @@ async function main() {
       // Update search with new prefix
       if (value) {
         history.updateSearch(value);
+        // Update suggestions overlay
+        const inputPos2 = (input as any)._layout;
+        if (inputPos2) {
+          searchSuggestions.show(value, history.getSearchMatches(), inputPos2.x ?? 0, inputPos2.y ?? 0);
+        } else {
+          searchSuggestions.show(value, history.getSearchMatches(), 0, 0);
+        }
       } else {
         history.resetSearch();
+        searchSuggestions.hide();
       }
     }
   });
@@ -766,6 +791,7 @@ async function main() {
 
     // Reset search mode
     getPromptHistory().resetSearch();
+    searchSuggestions.hide();
 
     return true; // Event handled
   });

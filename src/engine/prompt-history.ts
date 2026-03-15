@@ -191,6 +191,13 @@ export class PromptHistory {
   }
   
   /**
+   * Get current search matches
+   */
+  getSearchMatches(): string[] {
+    return [...this._searchMatches];
+  }
+  
+  /**
    * Get number of search matches
    */
   get searchMatchCount(): number {

@@ -82,7 +82,7 @@ class PaneSection {
   private _buttons: PaneButton[] = [];
   private _buttonsContainer: BoxRenderable;
   private _headerBox: BoxRenderable;
-  private _folded: boolean = true;
+  private _folded: boolean = false;
   private _renderer: CliRenderer;
 
   constructor(
@@ -168,8 +168,9 @@ class PaneSection {
 
     this._section.add(this._buttonsContainer);
 
-    // Initially hide buttons (folded)
-    this._buttonsContainer.visible = false;
+    // Initially show buttons (unfolded by default)
+    this._buttonsContainer.visible = true;
+    this._headerBox.backgroundColor = COLORS.buttonBg; // brighter when unfolded
   }
 
   toggle(): void {

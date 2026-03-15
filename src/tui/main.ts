@@ -576,7 +576,7 @@ async function main() {
         currentAbortController.abort();
         notifications.show({ message: "Stream cancelled", type: "info" });
       } else if (input.value.length) {
-        input.value = "";
+        input.setText("");
         renderer.requestRender();
       } else {
         cleanup();

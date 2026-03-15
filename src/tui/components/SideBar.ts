@@ -1,219 +1,23 @@
-import {
-  BoxRenderable,
-  CliRenderer,
-  TextRenderable,
-  ScrollBoxRenderable,
-  createTextAttributes,
-} from "@opentui/core";
+import { BoxRenderable, CliRenderer, ScrollBoxRenderable } from "@opentui/core";
 import { COLORS } from "../../engine/colors.js";
 import { subscribeToThemeChanges } from "../../engine/theme.js";
+import { getSidebarRegistry, createCategoryId, createButtonId, type SidebarCategory } from "../../engine/sidebar/index.js";
+import { SidebarCategory as SidebarCategoryClass } from "../../engine/sidebar/category.js";
 
 /**
- * PaneButton - A clickable button for the sidebar
- */
-class PaneButton {
-  private _button: BoxRenderable;
-  private _label: TextRenderable;
-  private _onClick?: () => void;
-  private _selected: boolean = false;
-  private _renderer: CliRenderer;
-
-  constructor(
-    renderer: CliRenderer,
-    options: {
-      icon: string;
-      label: string;
-      onClick?: () => void;
-    },
-  ) {
-    this._renderer = renderer;
-    this._onClick = options.onClick;
-
-    // Button container
-    this._button = new BoxRenderable(renderer, {
-      width: "100%",
-      height: 1,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "flex-start",
-      paddingX: 1,
-      paddingY: 0,
-    });
-
-    // Label only (no icon)
-    this._label = new TextRenderable(renderer, {
-      content: options.label,
-      fg: COLORS.text,
-    });
-
-    this._button.add(this._label);
-
-    // Click handler
-    this._button.onMouseUp = () => {
-      this._onClick?.();
-    };
-
-    // Hover effect
-    this._button.onMouseOver = () => {
-      this._button.backgroundColor = COLORS.surfaceAlt;
-      this._label.attributes = createTextAttributes({ bold: true });
-      this._renderer.requestRender?.();
-    };
-
-    this._button.onMouseOut = () => {
-      this._button.backgroundColor = this._selected ? COLORS.primary : "transparent";
-      this._label.attributes = createTextAttributes({ bold: false });
-      this._renderer.requestRender?.();
-    };
-  }
-
-  get renderable(): BoxRenderable {
-    return this._button;
-  }
-
-  setSelected(selected: boolean): void {
-    this._selected = selected;
-    this._button.backgroundColor = selected ? COLORS.primary : "transparent";
-    this._label.fg = selected ? COLORS.background : COLORS.text;
-  }
-}
-
-/**
- * PaneSection - A collapsible section with a title and buttons
- * No triangle indicator, custom background colors
- */
-class PaneSection {
-  private _section: BoxRenderable;
-  private _title: TextRenderable;
-  private _buttons: PaneButton[] = [];
-  private _buttonsContainer: BoxRenderable;
-  private _headerBox: BoxRenderable;
-  private _folded: boolean = false;
-  private _renderer: CliRenderer;
-
-  constructor(
-    renderer: CliRenderer,
-    options: {
-      title: string;
-      buttons: Array<{ icon: string; label: string; onClick?: () => void }>;
-    },
-  ) {
-    this._renderer = renderer;
-
-    // Section container
-    this._section = new BoxRenderable(renderer, {
-      width: "100%",
-      height: "auto",
-      flexDirection: "column",
-      gap: 0,
-    });
-
-    // Header box - brighter background when unfolded
-    this._headerBox = new BoxRenderable(renderer, {
-      width: "100%",
-      height: 1,
-      flexDirection: "row",
-      justifyContent: "flex-start",
-      alignItems: "center",
-      paddingX: 1,
-      backgroundColor: COLORS.surfaceAlt, // lighter when folded
-    });
-
-    // Section title - brighter color
-    this._title = new TextRenderable(renderer, {
-      content: options.title.toUpperCase(),
-      fg: COLORS.text,
-      attributes: createTextAttributes({ bold: true }),
-    });
-
-    this._headerBox.add(this._title);
-    this._section.add(this._headerBox);
-
-    // Header click toggles fold
-    this._headerBox.onMouseUp = () => {
-      this.toggle();
-    };
-
-    // Header hover effect - brighter background
-    this._headerBox.onMouseOver = () => {
-      this._headerBox.backgroundColor = COLORS.buttonBg;
-      this._renderer.requestRender?.();
-    };
-
-    this._headerBox.onMouseOut = () => {
-      // Restore based on folded state
-      this._headerBox.backgroundColor = this._folded
-        ? COLORS.surfaceAlt
-        : COLORS.buttonBg;
-      this._renderer.requestRender?.();
-    };
-
-    // Buttons container
-    this._buttonsContainer = new BoxRenderable(renderer, {
-      width: "100%",
-      height: "auto",
-      flexDirection: "column",
-      gap: 0,
-      paddingY: 1,
-    });
-
-    // Add buttons
-    for (const btn of options.buttons) {
-      const button = new PaneButton(renderer, {
-        icon: btn.icon,
-        label: btn.label,
-        onClick: () => {
-          // Expand when button clicked
-          if (this._folded) {
-            this.toggle();
-          }
-          btn.onClick?.();
-        },
-      });
-      this._buttons.push(button);
-      this._buttonsContainer.add(button.renderable);
-    }
-
-    this._section.add(this._buttonsContainer);
-
-    // Initially show buttons (unfolded by default)
-    this._buttonsContainer.visible = true;
-    this._headerBox.backgroundColor = COLORS.buttonBg; // brighter when unfolded
-  }
-
-  toggle(): void {
-    this._folded = !this._folded;
-    this._buttonsContainer.visible = !this._folded;
-
-    // Brighter background when unfolded
-    this._headerBox.backgroundColor = this._folded
-      ? COLORS.surfaceAlt
-      : COLORS.buttonBg;
-
-    this._renderer.requestRender?.();
-  }
-
-  get renderable(): BoxRenderable {
-    return this._section;
-  }
-
-  get buttons(): PaneButton[] {
-    return this._buttons;
-  }
-}
-
-/**
- * LeftPane - A sophisticated sidebar pane with multiple sections and interactive buttons
+ * SideBar - Main sidebar component using the registry system
+ * 
+ * Supports plugins by registering categories through the registry
  */
 export class SideBar {
   private _pane: BoxRenderable;
   private _scrollBox: ScrollBoxRenderable;
   private _sectionsContainer: BoxRenderable;
   private _renderer: CliRenderer;
-  private _sections: PaneSection[] = [];
+  private _categories: SidebarCategory[] = [];
   private _width: number;
   private _threshold: number;
-  private _activeButton: string = "chat";
+  private _activeButton: string = "chats";
 
   constructor(
     renderer: CliRenderer,
@@ -221,13 +25,13 @@ export class SideBar {
       width?: number;
       threshold?: number;
       onNavigate?: (section: string) => void;
-    },
+    }
   ) {
     this._renderer = renderer;
     this._width = options?.width ?? 30;
     this._threshold = options?.threshold ?? 120;
 
-    // Create the left pane container (auto height, not stretch)
+    // Create the left pane container (auto height)
     this._pane = new BoxRenderable(renderer, {
       width: this._width,
       height: "auto",
@@ -236,14 +40,14 @@ export class SideBar {
       gap: 0,
     });
 
-    // Scroll box for sections
+    // Scroll box for categories
     this._scrollBox = new ScrollBoxRenderable(renderer, {
       width: "100%",
-      height: "100%",
+      height: "auto",
       scrollY: true,
     });
 
-    // Container for all sections
+    // Container for all categories
     this._sectionsContainer = new BoxRenderable(renderer, {
       width: "100%",
       height: "auto",
@@ -254,16 +58,12 @@ export class SideBar {
     this._scrollBox.add(this._sectionsContainer);
     this._pane.add(this._scrollBox);
 
-    // Build all sections
-    this._buildSections(options?.onNavigate);
+    // Build categories from registry
+    this._buildCategories(options?.onNavigate);
 
     // Subscribe to theme changes
     subscribeToThemeChanges([
-      {
-        renderable: this._pane,
-        prop: "backgroundColor",
-        colorKey: "surfaceAlt",
-      },
+      { renderable: this._pane, prop: 'backgroundColor', colorKey: 'surfaceAlt' },
     ]);
 
     // Set initial visibility
@@ -275,195 +75,48 @@ export class SideBar {
     });
   }
 
-  private _buildSections(onNavigate?: (section: string) => void): void {
-    // === THIS WORKSPACE ===
-    const workspaceSection = new PaneSection(this._renderer, {
-      title: "This Workspace",
-      buttons: [
-        { icon: "💬", label: "Chats", onClick: () => this._handleNav("chats", onNavigate) },
-        { icon: "📊", label: "Visualize", onClick: () => this._handleNav("visualize", onNavigate) },
-        { icon: "⚙️", label: "Project Config", onClick: () => this._handleNav("projectconfig", onNavigate) },
-      ],
-    });
-    this._sections.push(workspaceSection);
-    this._sectionsContainer.add(workspaceSection.renderable);
+  private _buildCategories(onNavigate?: (section: string) => void): void {
+    const registry = getSidebarRegistry();
+    const categories = registry.getCategories();
 
-    // === AI & CHAT ===
-    const aiSection = new PaneSection(this._renderer, {
-      title: "AI & Chat",
-      buttons: [
-        { icon: "💬", label: "Chat", onClick: () => this._handleNav("chat", onNavigate) },
-        { icon: "🤖", label: "Agents", onClick: () => this._handleNav("agents", onNavigate) },
-        { icon: "🧠", label: "Models", onClick: () => this._handleNav("models", onNavigate) },
-        { icon: "⚡", label: "Prompts", onClick: () => this._handleNav("prompts", onNavigate) },
-      ],
-    });
-    this._sections.push(aiSection);
-    this._sectionsContainer.add(aiSection.renderable);
+    for (const catDef of categories) {
+      // Wrap the button onClick to also handle navigation
+      const wrappedButtons = catDef.buttons.map(btn => ({
+        id: btn.id,
+        label: btn.label,
+        onClick: () => {
+          this._activeButton = btn.id as unknown as string;
+          this._updateSelection();
+          onNavigate?.(btn.id as unknown as string);
+        },
+      }));
 
-    // === WORKFLOWS ===
-    const workflowsSection = new PaneSection(this._renderer, {
-      title: "Config",
-      buttons: [
-        {
-          icon: "🤖",
-          label: "Agents",
-          onClick: () => this._handleNav("agents", onNavigate),
-        },
-        {
-          icon: "🧠",
-          label: "Models",
-          onClick: () => this._handleNav("models", onNavigate),
-        },
-        {
-          icon: "⚡",
-          label: "Aliases",
-          onClick: () => this._handleNav("aliases", onNavigate),
-        },
-        {
-          icon: "🔄",
-          label: "Pipelines",
-          onClick: () => this._handleNav("pipelines", onNavigate),
-        },
-        {
-          icon: "📋",
-          label: "Templates",
-          onClick: () => this._handleNav("templates", onNavigate),
-        },
-        {
-          icon: "▶️",
-          label: "Run History",
-          onClick: () => this._handleNav("runhistory", onNavigate),
-        },
-      ],
-    });
-    this._sections.push(workflowsSection);
-    this._sectionsContainer.add(workflowsSection.renderable);
+      const category = new SidebarCategoryClass(this._renderer, {
+        ...catDef,
+        buttons: wrappedButtons,
+      });
 
-    // === ANALYTICS ===
-    const analyticsSection = new PaneSection(this._renderer, {
-      title: "Analytics",
-      buttons: [
-        {
-          icon: "📊",
-          label: "Dashboard",
-          onClick: () => this._handleNav("dashboard", onNavigate),
-        },
-        {
-          icon: "📈",
-          label: "Metrics",
-          onClick: () => this._handleNav("metrics", onNavigate),
-        },
-        {
-          icon: "🔍",
-          label: "Logs",
-          onClick: () => this._handleNav("logs", onNavigate),
-        },
-        {
-          icon: "🚨",
-          label: "Alerts",
-          onClick: () => this._handleNav("alerts", onNavigate),
-        },
-      ],
-    });
-    this._sections.push(analyticsSection);
-    this._sectionsContainer.add(analyticsSection.renderable);
-
-    // === SETTINGS ===
-    const settingsSection = new PaneSection(this._renderer, {
-      title: "Settings",
-      buttons: [
-        {
-          icon: "⚙️",
-          label: "Preferences",
-          onClick: () => this._handleNav("preferences", onNavigate),
-        },
-        {
-          icon: "🎨",
-          label: "Themes",
-          onClick: () => this._handleNav("themes", onNavigate),
-        },
-        {
-          icon: "🔌",
-          label: "Extensions",
-          onClick: () => this._handleNav("extensions", onNavigate),
-        },
-        {
-          icon: "❓",
-          label: "Help",
-          onClick: () => this._handleNav("help", onNavigate),
-        },
-        {
-          icon: "ℹ️",
-          label: "About",
-          onClick: () => this._handleNav("about", onNavigate),
-        },
-      ],
-    });
-    this._sections.push(settingsSection);
-    this._sectionsContainer.add(settingsSection.renderable);
-
-    // Set initial selection
-    this._updateSelection();
-  }
-
-  private _handleNav(
-    section: string,
-    onNavigate?: (section: string) => void,
-  ): void {
-    this._activeButton = section;
-    this._updateSelection();
-    onNavigate?.(section);
+      this._categories.push(category);
+      this._sectionsContainer.add(category.renderable);
+    }
   }
 
   private _updateSelection(): void {
-    // Reset all buttons to unselected
-    for (const section of this._sections) {
-      for (const button of section.buttons) {
+    for (const cat of this._categories) {
+      for (const button of cat.buttons) {
+        const btnId = button.renderable.id;
         button.setSelected(false);
       }
     }
 
-    // Find and select the active button
-    const sectionMap: Record<string, string> = {
-      Chat: "chat",
-      Agents: "agents",
-      Models: "models",
-      Prompts: "prompts",
-      Pipeline: "pipeline",
-      Tasks: "tasks",
-      Templates: "templates",
-      "Run History": "runhistory",
-      Files: "files",
-      Terminal: "terminal",
-      Debug: "debug",
-      Git: "git",
-      Packages: "packages",
-      "API Test": "apitest",
-      Database: "database",
-      Secrets: "secrets",
-      Webhooks: "webhooks",
-      "Cron Jobs": "cron",
-      Dashboard: "dashboard",
-      Metrics: "metrics",
-      Logs: "logs",
-      Alerts: "alerts",
-      Preferences: "preferences",
-      Themes: "themes",
-      Extensions: "extensions",
-      Help: "help",
-      About: "about",
-    };
-
-    for (const section of this._sections) {
-      for (const button of section.buttons) {
-        const label = (button as any)._label?.content || "";
-        if (sectionMap[label] === this._activeButton) {
+    for (const cat of this._categories) {
+      for (const button of cat.buttons) {
+        const btnId = (button as any)._button?.id || "";
+        if (btnId === this._activeButton) {
           button.setSelected(true);
         }
       }
     }
-
     this._renderer.requestRender?.();
   }
 
@@ -474,11 +127,11 @@ export class SideBar {
   }
 
   /**
-   * Add a custom section
+   * Add a category directly (alternative to registry)
    */
-  addSection(section: PaneSection): void {
-    this._sections.push(section);
-    this._sectionsContainer.add(section.renderable);
+  addCategory(category: SidebarCategory): void {
+    this._categories.push(category);
+    this._sectionsContainer.add(category.renderable);
   }
 
   /**
@@ -500,4 +153,73 @@ export class SideBar {
     this._pane.visible = false;
     this._renderer.requestRender?.();
   }
+}
+
+/**
+ * Helper to register default categories
+ * Call this at app startup to set up default sidebar
+ */
+export function registerDefaultSidebarCategories(): void {
+  const registry = getSidebarRegistry();
+
+  // This Workspace
+  registry.registerCategory({
+    id: createCategoryId("workspace"),
+    title: "This Workspace",
+    folded: false,
+    buttons: [
+      { id: createButtonId("chats"), label: "Chats", onClick: () => {} },
+      { id: createButtonId("visualize"), label: "Visualize", onClick: () => {} },
+      { id: createButtonId("projectconfig"), label: "Project Config", onClick: () => {} },
+    ],
+  });
+
+  // AI & Chat
+  registry.registerCategory({
+    id: createCategoryId("ai-chat"),
+    title: "AI & Chat",
+    buttons: [
+      { id: createButtonId("chat"), label: "Chat", onClick: () => {} },
+      { id: createButtonId("agents"), label: "Agents", onClick: () => {} },
+      { id: createButtonId("models"), label: "Models", onClick: () => {} },
+      { id: createButtonId("prompts"), label: "Prompts", onClick: () => {} },
+    ],
+  });
+
+  // Workflows
+  registry.registerCategory({
+    id: createCategoryId("workflows"),
+    title: "Workflows",
+    buttons: [
+      { id: createButtonId("pipeline"), label: "Pipeline", onClick: () => {} },
+      { id: createButtonId("tasks"), label: "Tasks", onClick: () => {} },
+      { id: createButtonId("templates"), label: "Templates", onClick: () => {} },
+      { id: createButtonId("runhistory"), label: "Run History", onClick: () => {} },
+    ],
+  });
+
+  // Analytics
+  registry.registerCategory({
+    id: createCategoryId("analytics"),
+    title: "Analytics",
+    buttons: [
+      { id: createButtonId("dashboard"), label: "Dashboard", onClick: () => {} },
+      { id: createButtonId("metrics"), label: "Metrics", onClick: () => {} },
+      { id: createButtonId("logs"), label: "Logs", onClick: () => {} },
+      { id: createButtonId("alerts"), label: "Alerts", onClick: () => {} },
+    ],
+  });
+
+  // Settings
+  registry.registerCategory({
+    id: createCategoryId("settings"),
+    title: "Settings",
+    buttons: [
+      { id: createButtonId("preferences"), label: "Preferences", onClick: () => {} },
+      { id: createButtonId("themes"), label: "Themes", onClick: () => {} },
+      { id: createButtonId("extensions"), label: "Extensions", onClick: () => {} },
+      { id: createButtonId("help"), label: "Help", onClick: () => {} },
+      { id: createButtonId("about"), label: "About", onClick: () => {} },
+    ],
+  });
 }

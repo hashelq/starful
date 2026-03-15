@@ -18,7 +18,7 @@ import { getTextInRange } from "./utils/text-buffer.js";
 import { createMarkdownRenderable, getFormattedResponse, createThinkingElement, findCodeBlockDelimiter, createErrorMessage } from "./utils/chat-helpers.js";
 import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
 import { createPromptModal, type PromptModal } from "./components/PromptModal.js";
-import { SideBar } from "./components/SideBar.js";
+import { SideBar, registerDefaultSidebarCategories } from "./components/SideBar.js";
 import { createCommandRegistry, type CommandRegistry } from "../engine/commands/index.js";
 import { COLORS, initColors } from "../engine/colors.js";
 import { getTheme as getThemeFromConfig } from "../engine/ui-config.js";
@@ -527,9 +527,12 @@ async function main() {
   });
 
   // Left pane - hides on narrow terminals, with navigation callback
+  // Register default sidebar categories first
+  registerDefaultSidebarCategories();
+  
   const sideBar = new SideBar(renderer, { 
     width: 30, 
-    threshold: 120,
+    threshold: 80,
     onNavigate: (section: string) => {
       notifications.show({ message: `Navigate to: ${section}`, type: "info" });
     }

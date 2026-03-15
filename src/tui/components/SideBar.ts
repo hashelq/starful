@@ -1,4 +1,5 @@
 import { BoxRenderable, CliRenderer, TextRenderable, ScrollBoxRenderable, createTextAttributes } from "@opentui/core";
+import { FoldableBox } from "./FoldableBox.js";
 import { COLORS } from "../../engine/colors.js";
 import { subscribeToThemeChanges } from "../../engine/theme.js";
 
@@ -67,12 +68,14 @@ class PaneButton {
 }
 
 /**
- * PaneSection - A section with a title and buttons
+ * PaneSection - A collapsible section with a title and buttons
  */
 class PaneSection {
   private _section: BoxRenderable;
   private _title: TextRenderable;
   private _buttons: PaneButton[] = [];
+  private _foldable: FoldableBox;
+  private _folded: boolean = true;
 
   constructor(
     renderer: CliRenderer,
@@ -89,34 +92,65 @@ class PaneSection {
       gap: 0,
     });
 
-    // Section title - wrapped in centered box
-    const titleBox = new BoxRenderable(renderer, {
+    // Section title - brighter color
+    this._title = new TextRenderable(renderer, {
+      content: options.title.toUpperCase(),
+      fg: COLORS.text,
+      attributes: createTextAttributes({ bold: true }),
+    });
+
+    // Create foldable box for buttons (initially folded)
+    this._foldable = new FoldableBox(renderer, {
+      foldTitle: "",
+      folded: true,
+      expandOnly: false,
+    });
+
+    // Add buttons to foldable content
+    const buttonsContainer = new BoxRenderable(renderer, {
+      width: "100%",
+      height: "auto",
+      flexDirection: "column",
+      gap: 0,
+    });
+
+    for (const btn of options.buttons) {
+      const button = new PaneButton(renderer, {
+        icon: btn.icon,
+        label: btn.label,
+        onClick: () => {
+          // Expand when button clicked
+          if (this._folded) {
+            this._foldable.toggle();
+            this._folded = false;
+          }
+          btn.onClick?.();
+        },
+      });
+      this._buttons.push(button);
+      buttonsContainer.add(button.renderable);
+    }
+
+    this._foldable.setContent(buttonsContainer);
+
+    // Title that toggles fold on click
+    const titleToggle = new BoxRenderable(renderer, {
       width: "100%",
       height: 1,
       flexDirection: "row",
       justifyContent: "center",
       alignItems: "center",
     });
+    titleToggle.add(this._title);
 
-    this._title = new TextRenderable(renderer, {
-      content: options.title.toUpperCase(),
-      fg: COLORS.dimText,
-      attributes: createTextAttributes({ bold: true }),
-    });
+    // Add toggle click handler
+    titleToggle.onMouseUp = () => {
+      this._foldable.toggle();
+      this._folded = !this._folded;
+    };
 
-    titleBox.add(this._title);
-    this._section.add(titleBox);
-
-    // Add buttons
-    for (const btn of options.buttons) {
-      const button = new PaneButton(renderer, {
-        icon: btn.icon,
-        label: btn.label,
-        onClick: btn.onClick,
-      });
-      this._buttons.push(button);
-      this._section.add(button.renderable);
-    }
+    this._section.add(titleToggle);
+    this._section.add(this._foldable);
   }
 
   get renderable(): BoxRenderable {

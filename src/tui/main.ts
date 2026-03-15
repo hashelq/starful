@@ -75,6 +75,7 @@ async function main() {
   const messages: Message[] = [];
   let isGenerating = false;
   let currentAbortController: AbortController | null = null;
+  let flowCounter = 0; // Counter for flow position hash
 
   // AGENT: Load configuration
   const config = loadConfig();
@@ -489,6 +490,13 @@ async function main() {
     }
   }
 
+  // AGENT: Helper to generate short hash from counter
+  function generateFlowHash(): string {
+    flowCounter++;
+    // Simple hash based on counter - convert to hex and take last 6 chars
+    return flowCounter.toString(16).padStart(6, "0");
+  }
+
   // AGENT: Helper to add user/assistant messages to history (non-streaming)
   function addStaticMessage(
     role: "user" | "assistant",
@@ -508,12 +516,25 @@ async function main() {
         alignItems: "flex-start",
       });
 
+      // Flow position hash (blue highlight)
+      const flowHash = generateFlowHash();
+      const hashText = new TextRenderable(renderer, {
+        content: `[${flowHash}] `,
+        fg: "#55aaff", // Blue color (color 4)
+        attributes: createTextAttributes({ bold: true }),
+      });
+
       const messageText = new TextRenderable(renderer, {
         content: "> " + content,
         fg: COLORS.userText,
         attributes: createTextAttributes({ bold: true }),
         flexGrow: 1,
       });
+
+      // Subscribe hash color to theme changes
+      subscribeToThemeChanges([
+        { renderable: hashText, prop: "fg", colorKey: "accent" },
+      ]);
 
       const timestamp = new TextRenderable(renderer, {
         content: time,
@@ -527,6 +548,7 @@ async function main() {
         { renderable: timestamp, prop: "fg", colorKey: "dimText" },
       ]);
 
+      messageRow.add(hashText);
       messageRow.add(messageText);
       messageRow.add(timestamp);
       historyContainer.add(messageRow);
@@ -575,13 +597,10 @@ async function main() {
       if (isGenerating && currentAbortController) {
         currentAbortController.abort();
         notifications.show({ message: "Stream cancelled", type: "info" });
-      } else if (input.value.length) {
-        input.setText("");
-        renderer.requestRender();
       } else {
         cleanup();
       }
-      // Always consume Ctrl+C to prevent exit
+
       return true;
     }
     return false;
@@ -631,7 +650,7 @@ async function main() {
   registerDefaultSidebarCategories();
 
   const sideBar = new SideBar(renderer, {
-    width: 30,
+    width: 25,
     threshold: 80,
     onNavigate: (section: string) => {
       notifications.show({ message: `Navigate to: ${section}`, type: "info" });

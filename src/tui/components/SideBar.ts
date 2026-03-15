@@ -1,6 +1,7 @@
 import { BoxRenderable, CliRenderer, ScrollBoxRenderable, TextRenderable } from "@opentui/core";
 import { COLORS } from "../../engine/colors.js";
 import { subscribeToThemeChanges } from "../../engine/theme.js";
+import { getFoldedSections, setFoldedSections } from "../../engine/ui-config.js";
 import { getSidebarRegistry, createCategoryId, createButtonId, type SidebarCategory } from "./sidebar/index.js";
 import { SidebarCategory as SidebarCategoryClass } from "./sidebar/category.js";
 import { StatusMatrix } from "./sidebar/status-matrix/index.js";
@@ -166,12 +167,18 @@ export class SideBar {
  */
 export function registerDefaultSidebarCategories(): void {
   const registry = getSidebarRegistry();
+  
+  // Load folded sections from config
+  const foldedSections = getFoldedSections();
+
+  // Helper to check if a section should be folded
+  const isFolded = (id: string) => foldedSections.includes(id);
 
   // This Workspace
   registry.registerCategory({
     id: createCategoryId("workspace"),
     title: "This Workspace",
-    folded: false,
+    folded: isFolded("workspace"),
     buttons: [
       { id: createButtonId("chats"), label: "Chats", onClick: () => {} },
       { id: createButtonId("visualize"), label: "Visualize", onClick: () => {} },
@@ -183,6 +190,7 @@ export function registerDefaultSidebarCategories(): void {
   registry.registerCategory({
     id: createCategoryId("ai-chat"),
     title: "AI & Chat",
+    folded: isFolded("ai-chat"),
     buttons: [
       { id: createButtonId("chat"), label: "Chat", onClick: () => {} },
       { id: createButtonId("agents"), label: "Agents", onClick: () => {} },
@@ -195,6 +203,7 @@ export function registerDefaultSidebarCategories(): void {
   registry.registerCategory({
     id: createCategoryId("workflows"),
     title: "Workflows",
+    folded: isFolded("workflows"),
     buttons: [
       { id: createButtonId("pipeline"), label: "Pipeline", onClick: () => {} },
       { id: createButtonId("tasks"), label: "Tasks", onClick: () => {} },
@@ -207,6 +216,7 @@ export function registerDefaultSidebarCategories(): void {
   registry.registerCategory({
     id: createCategoryId("analytics"),
     title: "Analytics",
+    folded: isFolded("analytics"),
     buttons: [
       { id: createButtonId("dashboard"), label: "Dashboard", onClick: () => {} },
       { id: createButtonId("metrics"), label: "Metrics", onClick: () => {} },
@@ -219,6 +229,7 @@ export function registerDefaultSidebarCategories(): void {
   registry.registerCategory({
     id: createCategoryId("settings"),
     title: "Settings",
+    folded: isFolded("settings"),
     buttons: [
       { id: createButtonId("preferences"), label: "Preferences", onClick: () => {} },
       { id: createButtonId("themes"), label: "Themes", onClick: () => {} },

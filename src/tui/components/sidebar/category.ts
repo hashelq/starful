@@ -1,6 +1,7 @@
 import { BoxRenderable, CliRenderer, TextRenderable, createTextAttributes } from "@opentui/core";
 import { COLORS } from "../../../engine/colors.js";
 import { subscribeToThemeChanges } from "../../../engine/theme.js";
+import { setFoldedSections, getFoldedSections } from "../../../engine/ui-config.js";
 import type { SidebarCategoryDef } from "./types.js";
 import { SidebarButton } from "./button.js";
 
@@ -15,12 +16,14 @@ export class SidebarCategory {
   private _buttons: SidebarButton[] = [];
   private _folded: boolean;
   private _renderer: CliRenderer;
+  private _id: string;
 
   constructor(
     renderer: CliRenderer,
     def: SidebarCategoryDef
   ) {
     this._renderer = renderer;
+    this._id = def.id;
     this._folded = def.folded ?? false;
 
     // Category container
@@ -110,6 +113,17 @@ export class SidebarCategory {
     this._folded = !this._folded;
     this._buttonsContainer.visible = !this._folded;
     this._headerBox.backgroundColor = this._folded ? COLORS.surfaceAlt : COLORS.buttonBg;
+    
+    // Save folded state to config
+    const foldedSections = getFoldedSections();
+    if (this._folded) {
+      if (!foldedSections.includes(this._id)) {
+        setFoldedSections([...foldedSections, this._id]);
+      }
+    } else {
+      setFoldedSections(foldedSections.filter(id => id !== this._id));
+    }
+    
     this._renderer.requestRender?.();
   }
 

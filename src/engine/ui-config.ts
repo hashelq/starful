@@ -5,10 +5,15 @@ import path from "node:path";
  * UI Configuration
  */
 
+export interface UISectionsConfig {
+  folded: string[];
+}
+
 export interface UIConfig {
   theme: string;
   centered: boolean;
   centeredWidth?: number;
+  sections?: UISectionsConfig;
 }
 
 /**
@@ -18,6 +23,9 @@ export const DEFAULT_UI_CONFIG: UIConfig = {
   theme: "catppuccin",
   centered: false,
   centeredWidth: 90,
+  sections: {
+    folded: [],
+  },
 };
 
 /**
@@ -118,5 +126,25 @@ export function getCenteredWidth(): number {
 export function setCentered(centered: boolean): void {
   const config = loadUIConfig();
   config.centered = centered;
+  saveUIConfig(config);
+}
+
+/**
+ * Get list of folded sections from UI config
+ */
+export function getFoldedSections(): string[] {
+  const config = loadUIConfig();
+  return config.sections?.folded ?? [];
+}
+
+/**
+ * Set folded sections in UI config
+ */
+export function setFoldedSections(folded: string[]): void {
+  const config = loadUIConfig();
+  if (!config.sections) {
+    config.sections = { folded: [] };
+  }
+  config.sections.folded = folded;
   saveUIConfig(config);
 }

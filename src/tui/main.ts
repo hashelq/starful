@@ -660,23 +660,29 @@ async function main() {
 
     // Handle Up arrow - previous in search or normal mode
     if (key.name === "up") {
-      if (input.value) {
-        // If there's text in input, use search mode
-        if (history.isSearching) {
-          // Continue searching
-          const prev = history.searchPrevious();
-          if (prev) {
-            input.value = prev;
-          }
-        } else {
-          // Start search mode with current input as prefix
-          const result = history.startSearch(input.value);
-          if (result) {
-            input.value = result;
-          }
+      const history = getPromptHistory();
+      
+      // If in cycling mode or search mode, continue that mode
+      if (history.isCycling) {
+        // Continue cycling through history (normal mode)
+        const prev = history.previous();
+        if (prev) {
+          input.value = prev;
+        }
+      } else if (history.isSearching) {
+        // Continue searching
+        const prev = history.searchPrevious();
+        if (prev) {
+          input.value = prev;
+        }
+      } else if (input.value) {
+        // Start search mode with current input as prefix
+        const result = history.startSearch(input.value);
+        if (result) {
+          input.value = result;
         }
       } else {
-        // Empty input - normal previous mode
+        // Empty input - start normal cycling
         const prev = history.previous();
         if (prev) {
           input.value = prev;
@@ -687,16 +693,20 @@ async function main() {
 
     // Handle Down arrow - next in search or normal mode
     if (key.name === "down") {
-      if (history.isSearching) {
+      const history = getPromptHistory();
+      
+      if (history.isCycling) {
+        const next = history.next();
+        input.value = next;
+      } else if (history.isSearching) {
         const next = history.searchNext();
         if (next) {
           input.value = next;
         } else {
-          // No more matches, show empty
           input.value = "";
         }
       } else if (input.value) {
-        // Normal next mode
+        // Normal next mode (not cycling yet)
         const next = history.next();
         input.value = next;
       }

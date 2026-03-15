@@ -20,6 +20,9 @@ export class PromptHistory {
   private _searchIndex = -1;
   private _isSearching = false;
   
+  // Cycling mode - true after pressing Up/Down to cycle, false when user types
+  private _isCycling = false;
+  
   constructor() {
     this._ensureDirectoryExists();
     this._load();
@@ -98,6 +101,7 @@ export class PromptHistory {
       this._currentIndex++;
     }
     
+    this._isCycling = true;
     return this._history[this._currentIndex] ?? "";
   }
   
@@ -115,6 +119,7 @@ export class PromptHistory {
     
     // At the end, return empty to clear input
     this._currentIndex = -1;
+    this._isCycling = false;
     return "";
   }
   
@@ -215,6 +220,14 @@ export class PromptHistory {
    */
   resetIndex(): void {
     this._currentIndex = -1;
+    this._isCycling = false;
+  }
+  
+  /**
+   * Check if currently cycling through history (Up/Down without search)
+   */
+  get isCycling(): boolean {
+    return this._isCycling;
   }
   
   /**

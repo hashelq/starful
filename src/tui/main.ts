@@ -123,6 +123,7 @@ async function main() {
 
   // Create CLI renderer with keyboard shortcuts
   const renderer = await createCliRenderer({
+    consoleOptions: {position: "top"},
     targetFps: 60,
     useMouse: true,
     enableMouseMovement: true,
@@ -169,6 +170,7 @@ async function main() {
       },
     ],
   });
+  renderer.console.show();
 
   // AGENT: Cleanup on exit - destroy renderer and kill process
   const cleanup = () => {

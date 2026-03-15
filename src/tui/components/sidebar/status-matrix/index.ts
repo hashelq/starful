@@ -94,7 +94,7 @@ import {
 
 /**
  * StatusMatrix - Animated ASCII matrix at the bottom of sidebar
- * Displays animations with dynamic timing based on generation state
+ * Displays animations with automatic cycling and dynamic timing based on generation state
  */
 export class StatusMatrix {
   private _container: BoxRenderable;
@@ -103,10 +103,13 @@ export class StatusMatrix {
   private _animations: Animation[] = [];
   private _tick = 0;
   private _animationInterval: any = null;
+  private _cycleInterval: any = null;
   private _isGeneratingFn: () => boolean;
   private _currentAnimIndex = 0;
   
   // Timing constants
+  private static readonly IDLE_CYCLE_MS = 10000;
+  private static readonly GENERATING_CYCLE_MS = 1000;
   private static readonly IDLE_TICK_MS = 80;
   private static readonly GENERATING_TICK_MS = 40;
   
@@ -251,8 +254,37 @@ export class StatusMatrix {
     // Start animation loop
     this._startAnimation(gridWidth, gridHeight);
     
-    // Pick initial random animation (stays the same, no cycling)
+    // Start cycling animations
+    this._startCycling();
+  }
+  
+  private _startCycling(): void {
+    // Pick initial random animation
     this._currentAnimIndex = Math.floor(Math.random() * this._animations.length);
+    
+    const cycle = () => {
+      // Pick a new random animation
+      let newIndex;
+      do {
+        newIndex = Math.floor(Math.random() * this._animations.length);
+      } while (newIndex === this._currentAnimIndex && this._animations.length > 1);
+      this._currentAnimIndex = newIndex;
+      
+      // Set next cycle interval based on generating state
+      const isGenerating = this._isGeneratingFn();
+      const interval = isGenerating 
+        ? StatusMatrix.GENERATING_CYCLE_MS 
+        : StatusMatrix.IDLE_CYCLE_MS;
+      
+      this._cycleInterval = setTimeout(cycle, interval);
+    };
+    
+    // Start cycling
+    const isGenerating = this._isGeneratingFn();
+    const initialInterval = isGenerating 
+      ? StatusMatrix.GENERATING_CYCLE_MS 
+      : StatusMatrix.IDLE_CYCLE_MS;
+    this._cycleInterval = setTimeout(cycle, initialInterval);
   }
   
   private _startAnimation(width: number, height: number): void {
@@ -268,6 +300,7 @@ export class StatusMatrix {
       
       const anim = this._animations[this._currentAnimIndex];
       if (!anim) return;
+      console.log(anim.name);
       
       for (let y = 0; y < height; y++) {
         const row = this._grid[y];
@@ -305,5 +338,6 @@ export class StatusMatrix {
   
   destroy(): void {
     if (this._animationInterval) clearTimeout(this._animationInterval);
+    if (this._cycleInterval) clearTimeout(this._cycleInterval);
   }
 }

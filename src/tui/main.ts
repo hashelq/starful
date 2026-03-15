@@ -18,8 +18,9 @@ import { getTextInRange } from "./utils/text-buffer.js";
 import { createMarkdownRenderable, getFormattedResponse, createThinkingElement, findCodeBlockDelimiter, createErrorMessage } from "./utils/chat-helpers.js";
 import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
 import { createPromptModal, type PromptModal } from "./components/PromptModal.js";
-import { createCommandRegistry } from "../engine/commands/index.js";
+import { createCommandRegistry, type CommandRegistry } from "../engine/commands/index.js";
 import { COLORS, initColors } from "../engine/colors.js";
+import { getTheme as getThemeFromConfig } from "../engine/ui-config.js";
 import { subscribeToThemeChanges } from "../engine/theme.js";
 import { TUIState } from "./state.js";
 import { loadConfig } from "../engine/config.js";
@@ -161,6 +162,12 @@ async function main() {
       onClearChat: handleClearChat,
       onRevert: handleRevert,
       onShowModel: handleShowModel,
+    });
+
+    // Set placeholders for command titles
+    (registry as CommandRegistry).setPlaceholders({
+      theme: getThemeFromConfig(),
+      model: config.model,
     });
 
     commandModal = createPromptModal(renderer, {

@@ -526,6 +526,28 @@ async function main() {
     gap: 1,
   });
 
+  // Left accent bar - hides on narrow terminals
+  const leftBar = new BoxRenderable(renderer, {
+    width: 1,
+    height: "100%",
+    backgroundColor: COLORS.primary,
+    position: "absolute",
+    left: 0,
+    top: 0,
+  });
+  mainContainer.add(leftBar);
+
+  // Update left bar visibility on resize
+  const updateLeftBarVisibility = () => {
+    const terminalWidth = (renderer as any).terminalWidth || 80;
+    leftBar.visible = terminalWidth >= 70;
+    renderer.requestRender?.();
+  };
+  updateLeftBarVisibility();
+  renderer.on("resize", (_width: number, _height: number) => {
+    updateLeftBarVisibility();
+  });
+
   // Add all children to main container in order: figlet -> title -> scroll/history -> input
   // AGENT: Add scrollable area and input to main container
   mainContainer.add(scrollBox);
@@ -541,6 +563,8 @@ async function main() {
   subscribeToThemeChanges([
     // Main container background
     { renderable: mainContainer, prop: 'backgroundColor', colorKey: 'background' },
+    // Left accent bar
+    { renderable: leftBar, prop: 'backgroundColor', colorKey: 'primary' },
     // Input colors - no background when typing
     { renderable: input, prop: 'textColor', colorKey: 'inputText' },
     { renderable: input, prop: 'placeholderColor', colorKey: 'placeholderText' },

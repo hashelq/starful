@@ -8,8 +8,8 @@ import {
   CliRenderer,
 } from "@opentui/core";
 import { FoldableBox } from "./FoldableBox.js";
-import { COLORS, getDefaultSyntaxStyle } from "../../engine/colors.js";
-import { subscribeToThemeChanges } from "../../engine/theme.js";
+import { COLORS, getDefaultSyntaxStyle, getSyntaxStyle } from "../../engine/colors.js";
+import { subscribeToThemeChanges, themeService } from "../../engine/theme.js";
 
 /**
  * CodeBlock - A collapsible code block component with:
@@ -101,6 +101,13 @@ export class CodeBlock {
       { renderable: this._copyButton, prop: 'bg', colorKey: 'copyButtonBg' },
       { renderable: this._copyButton, prop: 'fg', colorKey: 'copyButtonText' },
     ]);
+
+    // Subscribe to syntax style updates when theme changes
+    themeService.onThemeChange(() => {
+      this._expandedMarkdown.syntaxStyle = getSyntaxStyle();
+      this._foldedMarkdown.syntaxStyle = getSyntaxStyle();
+      this._renderer.requestRender?.();
+    });
   }
 
   /**

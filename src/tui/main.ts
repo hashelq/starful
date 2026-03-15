@@ -34,7 +34,7 @@ import {
   type CommandRegistry,
 } from "../engine/commands/index.js";
 import { COLORS, initColors } from "../engine/colors.js";
-import { getTheme as getThemeFromConfig } from "../engine/ui-config.js";
+import { getTheme as getThemeFromConfig, isCentered } from "../engine/ui-config.js";
 import { subscribeToThemeChanges } from "../engine/theme.js";
 import { TUIState } from "./state.js";
 import { loadConfig } from "../engine/config.js";
@@ -308,12 +308,16 @@ async function main() {
   }
 
   // AGENT: History container - holds all chat messages in a column layout
+  // In centered mode, limit width to improve readability
+  const centeredMode = isCentered();
   const historyContainer = new BoxRenderable(renderer, {
-    width: "100%",
+    width: centeredMode ? "80%" : "100%",
+    maxWidth: centeredMode ? 80 : "100%",
     height: "auto",
     flexDirection: "column",
     paddingX: 2,
     gap: 1,
+    alignItems: centeredMode ? "center" : "stretch",
   });
 
   // AGENT: Banner container - centers the brand and subtitle

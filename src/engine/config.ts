@@ -80,7 +80,11 @@ export function loadConfig(): Config {
     if (fs.existsSync(configPath)) {
       const data = fs.readFileSync(configPath, "utf-8");
       const loaded = JSON.parse(data);
-      return mergeConfig(DEFAULT_CONFIG, loaded);
+      const config = mergeConfig(DEFAULT_CONFIG, loaded);
+      
+      // Save to ensure all defaults are present
+      saveConfig(config);
+      return config;
     }
   } catch (error) {
     console.warn("Failed to load config, using defaults:", error);

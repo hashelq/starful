@@ -368,6 +368,12 @@ async function main() {
   // Add to history container so they scroll with messages
   historyContainer.add(bannerContainer);
 
+  // Add welcome message
+  addStaticMessage(
+    "assistant",
+    "Welcome! The modal knows about Starful's configuration system. Try: /theme, /model, or toggle centered mode via Ctrl+P. You can also use the AI to read/edit files, run commands, and more.",
+  );
+
   // AGENT: ScrollBox wraps history container - enables vertical scrolling for long chats
   const scrollBox = new ScrollBoxRenderable(renderer, {
     maxWidth: centeredWidth,

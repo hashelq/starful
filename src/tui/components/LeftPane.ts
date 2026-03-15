@@ -1,4 +1,4 @@
-import { BoxRenderable, CliRenderer, TextRenderable, createTextAttributes } from "@opentui/core";
+import { BoxRenderable, CliRenderer, TextRenderable, ScrollBoxRenderable, createTextAttributes } from "@opentui/core";
 import { COLORS } from "../../engine/colors.js";
 import { subscribeToThemeChanges } from "../../engine/theme.js";
 
@@ -90,15 +90,23 @@ class PaneSection {
       gap: 0,
     });
 
-    // Section title
+    // Section title - wrapped in centered box
+    const titleBox = new BoxRenderable(renderer, {
+      width: "100%",
+      height: 1,
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+    });
+
     this._title = new TextRenderable(renderer, {
       content: options.title.toUpperCase(),
       fg: COLORS.dimText,
       attributes: createTextAttributes({ bold: true }),
-      paddingY: 1,
-      paddingX: 2,
     });
-    this._section.add(this._title);
+
+    titleBox.add(this._title);
+    this._section.add(titleBox);
 
     // Add buttons
     for (const btn of options.buttons) {
@@ -126,6 +134,8 @@ class PaneSection {
  */
 export class LeftPane {
   private _pane: BoxRenderable;
+  private _scrollBox: ScrollBoxRenderable;
+  private _sectionsContainer: BoxRenderable;
   private _renderer: CliRenderer;
   private _sections: PaneSection[] = [];
   private _width: number;
@@ -144,14 +154,32 @@ export class LeftPane {
     this._width = options?.width ?? 30;
     this._threshold = options?.threshold ?? 120;
 
-    // Create the left pane container
+    // Create the left pane container (auto height, not stretch)
     this._pane = new BoxRenderable(renderer, {
       width: this._width,
-      height: "100%",
+      height: "auto",
       backgroundColor: COLORS.surfaceAlt,
       flexDirection: "column",
       gap: 0,
     });
+
+    // Scroll box for sections
+    this._scrollBox = new ScrollBoxRenderable(renderer, {
+      width: "100%",
+      height: "100%",
+      scrollY: true,
+    });
+
+    // Container for all sections
+    this._sectionsContainer = new BoxRenderable(renderer, {
+      width: "100%",
+      height: "auto",
+      flexDirection: "column",
+      gap: 0,
+    });
+
+    this._scrollBox.add(this._sectionsContainer);
+    this._pane.add(this._scrollBox);
 
     // Build all sections
     this._buildSections(options?.onNavigate);
@@ -182,7 +210,7 @@ export class LeftPane {
       ],
     });
     this._sections.push(aiSection);
-    this._pane.add(aiSection.renderable);
+    this._sectionsContainer.add(aiSection.renderable);
 
     // === WORKFLOWS ===
     const workflowsSection = new PaneSection(this._renderer, {
@@ -195,7 +223,7 @@ export class LeftPane {
       ],
     });
     this._sections.push(workflowsSection);
-    this._pane.add(workflowsSection.renderable);
+    this._sectionsContainer.add(workflowsSection.renderable);
 
     // === DEVELOPMENT ===
     const devSection = new PaneSection(this._renderer, {
@@ -209,7 +237,7 @@ export class LeftPane {
       ],
     });
     this._sections.push(devSection);
-    this._pane.add(devSection.renderable);
+    this._sectionsContainer.add(devSection.renderable);
 
     // === AUTOMATION ===
     const autoSection = new PaneSection(this._renderer, {
@@ -223,7 +251,7 @@ export class LeftPane {
       ],
     });
     this._sections.push(autoSection);
-    this._pane.add(autoSection.renderable);
+    this._sectionsContainer.add(autoSection.renderable);
 
     // === ANALYTICS ===
     const analyticsSection = new PaneSection(this._renderer, {
@@ -236,7 +264,7 @@ export class LeftPane {
       ],
     });
     this._sections.push(analyticsSection);
-    this._pane.add(analyticsSection.renderable);
+    this._sectionsContainer.add(analyticsSection.renderable);
 
     // === SETTINGS ===
     const settingsSection = new PaneSection(this._renderer, {
@@ -250,7 +278,7 @@ export class LeftPane {
       ],
     });
     this._sections.push(settingsSection);
-    this._pane.add(settingsSection.renderable);
+    this._sectionsContainer.add(settingsSection.renderable);
 
     // Set initial selection
     this._updateSelection();
@@ -303,7 +331,7 @@ export class LeftPane {
    */
   addSection(section: PaneSection): void {
     this._sections.push(section);
-    this._pane.add(section.renderable);
+    this._sectionsContainer.add(section.renderable);
   }
 
   /**

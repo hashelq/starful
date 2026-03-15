@@ -517,29 +517,37 @@ async function main() {
   // Add input to container
   inputContainer.add(input);
 
-  // AGENT: Main container - root layout with flexbox column (title → scrollbox → input)
+  // AGENT: Main container - root layout with flexbox row (leftPane | content)
   const mainContainer = new BoxRenderable(renderer, {
     width: "100%",
     height: "100%",
-    flexDirection: "column",
+    flexDirection: "row",
     backgroundColor: COLORS.background,
-    padding: 1,
     gap: 1,
   });
 
   // Left pane - hides on narrow terminals
-  const leftPane = new LeftPane(renderer, { width: 30, threshold: 70 });
+  const leftPane = new LeftPane(renderer, { width: 30, threshold: 120 });
 
-  // Add all children to main container in order: figlet -> title -> scroll/history -> input
-  // AGENT: Add scrollable area and input to main container
-  mainContainer.add(scrollBox);
-  mainContainer.add(inputContainer);
+  // Content container for the column layout (figlet, scrollbox, input)
+  const contentContainer = new BoxRenderable(renderer, {
+    width: "100%",
+    height: "100%",
+    flexDirection: "column",
+    padding: 1,
+    gap: 1,
+  });
+
+  // Add all children to content container in order: figlet -> title -> scroll/history -> input
+  contentContainer.add(scrollBox);
+  contentContainer.add(inputContainer);
+
+  // Add left pane and content to main container
+  mainContainer.add(leftPane.renderable);
+  mainContainer.add(contentContainer);
 
   // AGENT: Mount main container to renderer's root (root is readonly, use .add())
   renderer.root.add(mainContainer);
-
-  // AGENT: Add left pane (sidebar)
-  renderer.root.add(leftPane.renderable);
 
   // AGENT: Add command modal LAST so it appears on top
   renderer.root.add(commandModal.renderable);

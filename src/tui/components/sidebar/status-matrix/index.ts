@@ -107,6 +107,7 @@ export class StatusMatrix {
   private _isGeneratingFn: () => boolean;
   private _currentAnimIndex = 0;
   private _labelRow: TextRenderable[] = [];
+  private _versionRow: TextRenderable[] = [];
   
   // Timing constants
   private static readonly IDLE_CYCLE_MS = 10000;
@@ -247,21 +248,49 @@ export class StatusMatrix {
       this._container.add(row);
     }
     
-    // Create label row at bottom (1 char padding)
+    // Create label row at bottom - left: animation name (gray), right: version (bold)
     const labelRow = new BoxRenderable(renderer, {
       width: "100%",
       flexDirection: "row",
-      justifyContent: "center",
+      justifyContent: "space-between",
       gap: 0,
     });
-    for (let x = 0; x < gridWidth; x++) {
+    
+    // Left section - animation name
+    const leftSection = new BoxRenderable(renderer, {
+      width: "auto",
+      height: 1,
+      flexDirection: "row",
+      gap: 0,
+    });
+    for (let x = 0; x < Math.floor(gridWidth / 2); x++) {
       const cell = new TextRenderable(renderer, {
         content: " ",
-        fg: COLORS.text,
+        fg: COLORS.textMuted,
       });
       this._labelRow.push(cell);
-      labelRow.add(cell);
+      leftSection.add(cell);
     }
+    labelRow.add(leftSection);
+    
+    // Right section - version
+    const rightSection = new BoxRenderable(renderer, {
+      width: "auto",
+      height: 1,
+      flexDirection: "row",
+      gap: 0,
+    });
+    const versionText = "Starful v26.05";
+    for (let x = 0; x < versionText.length; x++) {
+      const cell = new TextRenderable(renderer, {
+        content: versionText[x],
+        fg: COLORS.text,
+      });
+      this._versionRow.push(cell);
+      rightSection.add(cell);
+    }
+    labelRow.add(rightSection);
+    
     this._container.add(labelRow);
     
     // Subscribe to theme changes
@@ -312,17 +341,16 @@ export class StatusMatrix {
     if (!anim) return;
     
     const name = anim.name;
-    const labelWidth = this._labelRow.length;
     
     // Clear row
     for (const cell of this._labelRow) {
-      cell.content = " ";
+      if (cell) cell.content = " ";
     }
     
-    // Center the name
-    const padding = Math.floor((labelWidth - name.length) / 2);
+    // Left-align the name (with 1 char padding)
+    const startIndex = 1;
     for (let i = 0; i < name.length; i++) {
-      const cellIndex = padding + i;
+      const cellIndex = startIndex + i;
       if (cellIndex >= 0 && cellIndex < this._labelRow.length) {
         const cell = this._labelRow[cellIndex];
         const char = name[i] ?? " ";

@@ -13,7 +13,6 @@ import {
 } from "@opentui/core";
 import { OllamaClient } from "../llm/implementations/ollama-client.js";
 import { CodeBlock } from "./components/CodeBlock.js";
-import { getTextInRange } from "./utils/text-buffer.js";
 import {
   createMarkdownRenderable,
   getFormattedResponse,
@@ -55,8 +54,6 @@ interface Message {
 // ============================================================================
 // Global State
 // ============================================================================
-
-let dist = (x: number, y: number) => Math.abs(x - y);
 
 // ============================================================================
 // Main Application
@@ -234,32 +231,27 @@ async function main() {
     });
   }
 
-  // Implement copy selection
+  // Implement copy selection using OpenTUI's built-in selection
   {
-    let selectionStart = { x: -1, y: -1 };
-    renderer.root.onMouseDown = (event) => {
-      selectionStart.x = event.x;
-      selectionStart.y = event.y;
-    };
-
-    renderer.root.onMouseUp = (event) => {
-      if (selectionStart.x === -1) return;
-      if (!dist(event.x, selectionStart.x) && !dist(event.y, selectionStart.y))
-        return;
-      let text = getTextInRange(
-        renderer,
-        event.x,
-        event.y,
-        selectionStart.x,
-        selectionStart.y,
-      );
-      if (!text.trim()) return;
-      renderer.copyToClipboardOSC52(text);
-      notifications.show({
-        message: "Copied!",
-      });
+    renderer.root.onMouseUp = () => {
+      // Use OpenTUI's built-in selection handling
+      const selection = renderer.getSelection();
+      if (!selection) return;
+      
+      const container = renderer.getSelectionContainer();
+      if (!container) return;
+      
+      // Check if the container has getSelectedText method
+      if ('getSelectedText' in container) {
+        const text = (container as any).getSelectedText();
+        if (text && text.trim()) {
+          renderer.copyToClipboardOSC52(text);
+          notifications.show({
+            message: "Copied!",
+          });
+        }
+      }
       renderer.clearSelection();
-      selectionStart.x = -1;
     };
   }
 
@@ -316,6 +308,7 @@ async function main() {
   const inputContainer = new BoxRenderable(renderer, {
     width: "100%",
     paddingX: 2,
+    height: 1
   });
 
   // AGENT: Streams LLM response from Ollama - handles both thinking and content phases

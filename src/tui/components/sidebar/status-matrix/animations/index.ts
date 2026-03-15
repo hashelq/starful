@@ -53,3 +53,36 @@ export { NeuralAnimation } from "./neural.js";
 export { FiberAnimation } from "./fiber.js";
 export { USBAnimation } from "./usb.js";
 export { SonarAnimation } from "./sonar.js";
+
+// Abstract/Math animations
+export { FibonacciAnimation } from "./fibonacci.js";
+export { FractalAnimation } from "./fractal.js";
+export { VoronoiAnimation } from "./voronoi.js";
+export { PerlinAnimation } from "./perlin.js";
+export { PolygonAnimation } from "./polygon.js";
+export { StarAnimation } from "./star.js";
+export { DiamondAnimation } from "./diamond.js";
+export { CubeAnimation } from "./cube.js";
+export { SphereAnimation } from "./sphere.js";
+export { TorusAnimation } from "./torus.js";
+
+// Particle/Science animations
+export { ElectronAnimation } from "./electron.js";
+export { AtomAnimation } from "./atom.js";
+export { DNAAnimation } from "./dna.js";
+export { CellAnimation } from "./cell.js";
+export { BlackholeAnimation } from "./blackhole.js";
+export { SupernovaAnimation } from "./supernova.js";
+export { GravityAnimation } from "./gravity.js";
+export { CrystalAnimation } from "./crystal.js";
+export { PlasmaAnimation } from "./plasma.js";
+export { BrownianAnimation } from "./brownian.js";
+export { DiffusionAnimation } from "./diffusion.js";
+
+// Retro/Gaming animations
+export { TetrisAnimation } from "./tetris.js";
+export { PongAnimation } from "./pong.js";
+export { SnakeAnimation } from "./snake.js";
+export { SpaceInvaderAnimation } from "./spaceinvader.js";
+export { StarfieldAnimation } from "./starfield.js";
+export { AsteroidsAnimation } from "./asteroids.js";

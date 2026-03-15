@@ -53,6 +53,36 @@ import {
   FiberAnimation,
   USBAnimation,
   SonarAnimation,
+  // Abstract/Math animations
+  FibonacciAnimation,
+  FractalAnimation,
+  VoronoiAnimation,
+  PerlinAnimation,
+  PolygonAnimation,
+  StarAnimation,
+  DiamondAnimation,
+  CubeAnimation,
+  SphereAnimation,
+  TorusAnimation,
+  // Particle/Science animations
+  ElectronAnimation,
+  AtomAnimation,
+  DNAAnimation,
+  CellAnimation,
+  BlackholeAnimation,
+  SupernovaAnimation,
+  GravityAnimation,
+  CrystalAnimation,
+  PlasmaAnimation,
+  BrownianAnimation,
+  DiffusionAnimation,
+  // Retro/Gaming animations
+  TetrisAnimation,
+  PongAnimation,
+  SnakeAnimation,
+  SpaceInvaderAnimation,
+  StarfieldAnimation,
+  AsteroidsAnimation,
 } from "./animations/index.js";
 
 /**
@@ -139,6 +169,36 @@ export class StatusMatrix {
       new FiberAnimation(),
       new USBAnimation(),
       new SonarAnimation(),
+      // Abstract/Math
+      new FibonacciAnimation(),
+      new FractalAnimation(),
+      new VoronoiAnimation(),
+      new PerlinAnimation(),
+      new PolygonAnimation(),
+      new StarAnimation(),
+      new DiamondAnimation(),
+      new CubeAnimation(),
+      new SphereAnimation(),
+      new TorusAnimation(),
+      // Particle/Science
+      new ElectronAnimation(),
+      new AtomAnimation(),
+      new DNAAnimation(),
+      new CellAnimation(),
+      new BlackholeAnimation(),
+      new SupernovaAnimation(),
+      new GravityAnimation(),
+      new CrystalAnimation(),
+      new PlasmaAnimation(),
+      new BrownianAnimation(),
+      new DiffusionAnimation(),
+      // Retro/Gaming
+      new TetrisAnimation(),
+      new PongAnimation(),
+      new SnakeAnimation(),
+      new SpaceInvaderAnimation(),
+      new StarfieldAnimation(),
+      new AsteroidsAnimation(),
     ];
     
     // Calculate grid size (1 y ≈ 1.5 x)

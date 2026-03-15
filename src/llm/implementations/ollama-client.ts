@@ -51,14 +51,21 @@ export class OllamaClient {
     endpoint: string,
     body?: Record<string, unknown>,
     streaming = false,
+    signal?: AbortSignal,
   ): Promise<AsyncIterable<T> | T> {
     const url = `http://${this.config.host}:${this.config.port}${this.config.basepath}${endpoint}`;
+
+    // Combine timeout signal with custom signal if provided
+    const timeoutSignal = AbortSignal.timeout(this.config.timeout);
+    const combinedSignal = signal 
+      ? AbortSignal.any([timeoutSignal, signal])
+      : timeoutSignal;
 
     const response = await fetch(url, {
       method: "POST",
       headers: this._headers(),
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(this.config.timeout),
+      signal: combinedSignal,
     });
 
     if (!response.ok) {
@@ -104,11 +111,17 @@ export class OllamaClient {
   /**
    * Generate a chat response with conversation history.
    * Uses POST /api/chat endpoint.
+   * 
+   * @param model - The model name to use
+   * @param messages - Conversation history
+   * @param tools - Optional tools for function calling
+   * @param signal - Optional AbortSignal to cancel the stream
    */
   async chat(
     model: string,
     messages?: ChatMessage[],
     tools?: ModelTool[],
+    signal?: AbortSignal,
   ): Promise<AsyncIterable<ChatResponse>> {
     const body: Record<string, unknown> = {
       model,
@@ -123,6 +136,8 @@ export class OllamaClient {
     return (await this.getResponse(
       "/api/chat",
       body,
+      false,
+      signal,
     )) as AsyncIterable<ChatResponse>;
   }
 

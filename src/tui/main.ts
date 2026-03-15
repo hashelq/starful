@@ -59,6 +59,7 @@ async function main() {
   // AGENT: App state - message history and generation lock
   const messages: Message[] = [];
   let isGenerating = false;
+  let currentAbortController: AbortController | null = null;
 
   // AGENT: Load configuration
   const config = loadConfig();
@@ -79,11 +80,22 @@ async function main() {
     useMouse: true,
     enableMouseMovement: true,
     autoFocus: true,
-    exitOnCtrlC: true,
+    exitOnCtrlC: false, // We'll handle Ctrl+C manually for stream cancellation
     prependInputHandlers: [
       (sequence) => {
         // Parse key with Kitty keyboard protocol support
         const key = parseKeypress(sequence, { useKittyKeyboard: true });
+        
+        // Check for Ctrl+C - cancel ongoing stream
+        if (key && key.ctrl && key.name === "c") {
+          if (isGenerating && currentAbortController) {
+            currentAbortController.abort();
+            notifications.show({ message: "Stream cancelled", type: "info" });
+            return true; // Stop propagation
+          }
+          // If not generating, let it propagate (will exit)
+          return false;
+        }
         
         // Check for Ctrl+P
         if (key && key.ctrl && key.name === "p") {
@@ -307,7 +319,10 @@ async function main() {
       let contentStarted = false;
       let content = "";
 
-      const chatStream = await ollama.chat(config.model, messagesForOllama);
+      // Create AbortController for cancelling the stream
+      currentAbortController = new AbortController();
+      
+      const chatStream = await ollama.chat(config.model, messagesForOllama, undefined, currentAbortController.signal);
       let inCode: boolean = false;
       let languageLabel: null | TextRenderable = null;
       let codeLang = "";
@@ -405,13 +420,28 @@ async function main() {
         }
       }
     } catch (error) {
-      const errorMsg = createErrorMessage(
-        renderer,
-        `Error: ${error instanceof Error ? error.message : "Failed to connect to Ollama. Make sure it's running on localhost:11434"}`,
-      );
-      historyContainer.add(errorMsg);
+      // Check if this was an abort (Ctrl+C)
+      if (error instanceof Error && error.name === "AbortError") {
+        // User cancelled - don't show error, just add a note
+        if (contentStarted || thinkingStarted) {
+          const cancelMsg = createErrorMessage(
+            renderer,
+            "[Cancelled]",
+          );
+          cancelMsg.fg = COLORS.textMuted; // Make it look like a muted message
+          historyContainer.add(cancelMsg);
+        }
+      } else {
+        // Real error - show it
+        const errorMsg = createErrorMessage(
+          renderer,
+          `Error: ${error instanceof Error ? error.message : "Failed to connect to Ollama. Make sure it's running on localhost:11434"}`,
+        );
+        historyContainer.add(errorMsg);
+      }
     } finally {
       isGenerating = false;
+      currentAbortController = null;
     }
   }
 

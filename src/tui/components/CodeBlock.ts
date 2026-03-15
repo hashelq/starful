@@ -70,6 +70,11 @@ export class CodeBlock {
       scrollY: true,
       stickyScroll: true,
     });
+    
+    // Stop scroll propagation to prevent parent scrollbox from scrolling
+    foldedScroll.onMouseScroll = (event) => {
+      event.stopPropagation();
+    };
     foldedScroll.add(this._foldedMarkdown);
 
     const vC = new BoxRenderable(renderer, {

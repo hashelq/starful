@@ -1,4 +1,4 @@
-import { BoxRenderable, CliRenderer, createTextAttributes, TextRenderable } from "@opentui/core";
+import { BoxRenderable, CliRenderer, createTextAttributes, TextRenderable, type Color } from "@opentui/core";
 import { COLORS } from "../../../../engine/colors.js";
 import { subscribeToThemeChanges } from "../../../../engine/theme.js";
 import {
@@ -109,6 +109,21 @@ export class StatusMatrix {
   private _labelRow: TextRenderable[] = [];
   private _versionRow: TextRenderable[] = [];
   
+  // Available colors for random selection (using string hex values)
+  private static readonly ANIMATION_COLORS = [
+    "#89b4fa", // blue accent
+    "#f38ba8", // red
+    "#a6e3a1", // green
+    "#f9e2af", // yellow
+    "#cba6f7", // purple
+    "#94e2d5", // teal
+    "#fab387", // peach
+    "#74c7ec", // sky
+  ];
+  
+  // Randomly select a color on initialization
+  private selectedColor: Color = StatusMatrix.ANIMATION_COLORS[Math.floor(Math.random() * StatusMatrix.ANIMATION_COLORS.length)] as Color;
+  
   // Timing constants
   private static readonly IDLE_CYCLE_MS = 10000;
   private static readonly GENERATING_CYCLE_MS = 1000;
@@ -134,6 +149,7 @@ export class StatusMatrix {
       // Nature
       new FireAnimation(),
       new WaterAnimation(),
+
       new LightningAnimation(),
       new GalaxyAnimation(),
       new SnowAnimation(),
@@ -391,7 +407,7 @@ export class StatusMatrix {
           
           // Color based on intensity
           if (frame.intensity > 7) {
-            cell.fg = COLORS.accent;
+            cell.fg = this.selectedColor;
           } else if (frame.intensity > 4) {
             cell.fg = COLORS.text;
           } else {

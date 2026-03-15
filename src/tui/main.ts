@@ -412,7 +412,10 @@ Start by asking me something!`;
     width: "100%",
     maxWidth: centeredWidth,
     paddingX: 2,
-    height: 1
+    paddingY: 1,
+    height: 1,
+    backgroundColor: COLORS.surface,
+    marginBottom: 1,
   });
 
   // AGENT: Streams LLM response from Ollama - handles both thinking and content phases

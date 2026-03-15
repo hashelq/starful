@@ -400,7 +400,7 @@ async function main() {
       let inCode: boolean = false;
       let languageLabel: null | TextRenderable = null;
       let codeLang = "";
-      let currentCodeBlock: any = null;
+      let codeBlock: CodeBlock | null = null;
 
       let writeMarkDown = (content: string) => {
         let text = inCode ? `\`\`\`${content}\`\`\`` : content;
@@ -455,10 +455,9 @@ async function main() {
               content = content.substring(codeTagIndex + 3);
 
               // Create CodeBlock component
-              const codeBlock = new CodeBlock(renderer, treeSitterClient, () =>
+              codeBlock = new CodeBlock(renderer, treeSitterClient, () =>
                 input.focus(),
               );
-              currentCodeBlock = codeBlock;
               const codeBlockDecorated = new BoxRenderable(renderer, {
                 border: true,
                 borderColor: COLORS.foreground,
@@ -471,6 +470,9 @@ async function main() {
               languageLabel = codeBlock.languageLabel;
             } else {
               content = content.substring(codeTagIndex + 3);
+
+              if (codeBlock)
+                codeBlock.finalize();
 
               streamingMarkdownContent = createMarkdownRenderable(
                 renderer,
@@ -498,13 +500,6 @@ async function main() {
 
         renderer.requestRender();
 
-        if (chunk.done) {
-          // Auto-expand code block if content fits in folded view
-          if (currentCodeBlock) {
-            currentCodeBlock.onStreamComplete();
-          }
-          break;
-        }
       }
     } catch (error) {
       // Check if this was an abort (Ctrl+C)

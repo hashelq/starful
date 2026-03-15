@@ -213,11 +213,8 @@ export class CodeBlock {
   finalize(): void {
     const content = this._foldedMarkdown.content || "";
     // Count lines (excluding the code fence line if present)
-    const lines = content.split("\n").filter((line, i) => {
-      // Skip first line if it's a code fence
-      if (i === 0 && line.trim().startsWith("```")) return false;
-      return true;
-    });
+    const lines = content.split("\n");
+    console.log({lines: lines.length});
     
     // If content fits within 8 lines, unfold automatically
     if (lines.length <= 8) {

@@ -39,11 +39,11 @@ export class CodeBlock {
     this._treeSitterClient = treeSitterClient;
     this._inputFocus = inputFocus;
 
-    // Create the outer gray box - no border, uses surfaceAlt background
+    // Create the outer gray box - no border, uses base02 (gray) background
     this._codeBox = new BoxRenderable(renderer, {
       width: "100%",
       height: "auto",
-      backgroundColor: COLORS.surfaceAlt,
+      backgroundColor: COLORS.inputBg,
       paddingX: 1,
       border: false,
     });
@@ -96,7 +96,7 @@ export class CodeBlock {
 
     // Subscribe all color properties to theme changes for automatic updates  
     subscribeToThemeChanges([
-      { renderable: this._codeBox, prop: 'backgroundColor', colorKey: 'surfaceAlt' },
+      { renderable: this._codeBox, prop: 'backgroundColor', colorKey: 'inputBg' },
       { renderable: this._languageLabel, prop: 'fg', colorKey: 'languageLabel' },
       { renderable: this._copyButton, prop: 'bg', colorKey: 'copyButtonBg' },
       { renderable: this._copyButton, prop: 'fg', colorKey: 'copyButtonText' },

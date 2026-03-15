@@ -206,6 +206,8 @@ export function createCommandRegistry(
     onRevert?: () => void;
     onShowModel?: () => void;
     onToggleCentered?: (centered: boolean) => void;
+    ollamaClient?: any;
+    onModelChange?: (model: string) => void;
   } = {}
 ): CommandRegistry {
   const registry = new CommandRegistry();
@@ -220,7 +222,14 @@ export function createCommandRegistry(
   // Register commands - create new instances with handlers
   registry.register(new ClearCommand());
   registry.register(new RevertCommand());
-  registry.register(new ModelCommand());
+  registry.register(new ModelCommand(ui, options.ollamaClient, (newModel: string) => {
+    // Update model placeholder after model change
+    const parts = newModel.split("/");
+    registry.setPlaceholders({ model: parts[1] || newModel });
+    if (options.onModelChange) {
+      options.onModelChange(newModel);
+    }
+  }));
   registry.register(new ThemeCommand(ui, (newTheme: string) => {
     // Update theme placeholder after theme change
     registry.setPlaceholders({ theme: newTheme });

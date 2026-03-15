@@ -262,12 +262,23 @@ async function main() {
       renderer.requestRender?.();
     };
 
+    // Handle model change - reinitialize with new model
+    const handleModelChange = (newModel: string) => {
+      // Update the model variable for future requests
+      const parsed = parseDefaultModel();
+      // Force reload by re-parsing
+      const updated = parseDefaultModel();
+      notifications.show({ message: `Model changed to: ${updated.model}`, type: "info" });
+    };
+
     // Pass UI implementation to registry (ThemeCommand will use it)
     const registry = createCommandRegistry(renderer, tuiUI, {
       onClearChat: handleClearChat,
       onRevert: handleRevert,
       onShowModel: handleShowModel,
       onToggleCentered: handleToggleCentered,
+      ollamaClient: ollama,
+      onModelChange: handleModelChange,
     });
 
     // Set placeholders for command titles

@@ -108,16 +108,13 @@ async function main() {
             notifications.show({ message: "Stream cancelled", type: "info" });
             return true; // Stop propagation
           }
-          // If not generating, consume the event (user can use Ctrl+Q to exit)
-          return true;
+          // If not generating and input is empty, exit
+          if (!input.value.trim()) {
+            return false; // Let it propagate to exit
+          }
+          return true; // Otherwise consume the Ctrl+C
         }
-        
-        // Check for Ctrl+Q - quit the app
-        if (key && key.ctrl && key.name === "q") {
-          renderer.destroy();
-          process.exit(0);
-        }
-        
+
         // Check for Ctrl+P
         if (key && key.ctrl && key.name === "p") {
           commandModal?.toggle();
@@ -135,6 +132,13 @@ async function main() {
       },
     ],
   });
+
+  // AGENT: Cleanup on exit - destroy renderer and kill process
+  const cleanup = () => {
+    console.log("\nShutting down Starful...\n");
+    renderer.destroy();
+    process.exit(0);
+  };
 
   // Implement notifications
   let notifications: NotificationsOverlay;
@@ -562,15 +566,20 @@ async function main() {
 
   // Handle key events directly on the input
   input.onKeyDown = (key) => {
+    if (key.ctrl && key.name === "d" && !input.value.length) {
+      cleanup();
+    }
+
     // Handle Ctrl+C - cancel stream if generating, else consume to prevent exit
     if (key.ctrl && key.name === "c") {
       if (isGenerating && currentAbortController) {
         currentAbortController.abort();
         notifications.show({ message: "Stream cancelled", type: "info" });
       } else if (input.value.length) {
-        input.value = "abc";
+        input.value = "";
+        renderer.requestRender();
       } else {
-        renderer.stop();
+        cleanup();
       }
       // Always consume Ctrl+C to prevent exit
       return true;
@@ -681,13 +690,6 @@ async function main() {
 
   // AGENT: Start render loop - blocks until process exits
   renderer.auto();
-
-  // AGENT: Cleanup on exit - destroy renderer and kill process
-  const cleanup = () => {
-    console.log("\nShutting down Starful...\n");
-    renderer.destroy();
-    process.exit(0);
-  };
 
   process.on("SIGINT", cleanup);
   process.on("SIGTERM", cleanup);

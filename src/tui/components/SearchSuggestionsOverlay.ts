@@ -44,9 +44,9 @@ export class SearchSuggestionsOverlay extends BoxRenderable {
   }
   
   /**
-   * Show suggestions overlay at specific position
+   * Show suggestions overlay
    */
-  show(prefix: string, suggestions: string[], inputX: number, inputY: number): void {
+  show(prefix: string, suggestions: string[]): void {
     if (suggestions.length === 0) {
       this.hide();
       return;
@@ -56,10 +56,6 @@ export class SearchSuggestionsOverlay extends BoxRenderable {
     this._suggestions = suggestions.slice(0, 8); // Max 8
     this._currentIndex = 0;
     this._isOverlayVisible = true;
-    
-    // Position above the input
-    this.left = inputX;
-    this.top = inputY - this._suggestions.length - 1;
     
     // Clear existing suggestions
     for (const item of this._suggestionItems) {

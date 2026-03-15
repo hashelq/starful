@@ -206,15 +206,20 @@ export class CodeBlock {
   }
 
   /**
-   * Called when streaming is complete - auto-expand if content fits in folded view
+   * Finalize construction
+   * If content fits within folded height (8 lines), unfold automatically
    */
-  onStreamComplete(): void {
-    const content = this._expandedMarkdown.content;
-    const lines = content.split('\n').filter(line => line.trim()).length;
-    const maxFoldedLines = 8;
+  finalize(): void {
+    const content = this._foldedMarkdown.content || "";
+    // Count lines (excluding the code fence line if present)
+    const lines = content.split("\n").filter((line, i) => {
+      // Skip first line if it's a code fence
+      if (i === 0 && line.trim().startsWith("```")) return false;
+      return true;
+    });
     
-    // If content has fewer lines than max folded height, auto-expand
-    if (lines <= maxFoldedLines) {
+    // If content fits within 8 lines, unfold automatically
+    if (lines.length <= 8) {
       this._fold.folded = false;
     }
   }

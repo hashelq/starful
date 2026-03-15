@@ -2,13 +2,15 @@ import type { CliRenderer } from "@opentui/core";
 
 /**
  * Get text from renderer buffer in a rectangular region
+ * If multiple lines are selected, copies whole lines (including empty lines between)
  */
 export function getTextInRange(
   renderer: CliRenderer,
   x1: number,
   y1: number,
   x2: number,
-  y2: number
+  y2: number,
+  copyWholeLines: boolean = true,
 ): string {
   const buf = renderer.currentRenderBuffer;
   if (!buf) return "";
@@ -19,19 +21,29 @@ export function getTextInRange(
   const minY = Math.min(y1, y2);
   const maxY = Math.max(y1, y2);
 
+  const isMultiLine = minY !== maxY;
+
   const charArr = buf.buffers.char as Uint32Array;
   
   let text = "";
   for (let y = minY; y <= maxY && y < buf.height; y++) {
     let line = "";
-    for (let x = minX; x <= maxX && x < buf.width; x++) {
+    // If multi-line selection, copy from column 0 to maxX to get whole lines
+    // Otherwise use the original x1/x2 range
+    const startX = (isMultiLine && copyWholeLines) ? 0 : minX;
+    const endX = (isMultiLine && copyWholeLines) ? maxX : maxX;
+    
+    for (let x = startX; x <= endX && x < buf.width; x++) {
       const index = y * buf.width + x;
       const charCode = charArr[index];
       if (charCode !== 0) {
         line += String.fromCharCode(charCode);
       }
     }
-    if (line.trim()) {
+    if (isMultiLine && copyWholeLines) {
+      // Include all lines when multi-line
+      text += line + "\n";
+    } else if (line.trim()) {
       text += line + "\n";
     }
   }

@@ -308,16 +308,14 @@ async function main() {
   }
 
   // AGENT: History container - holds all chat messages in a column layout
-  // In centered mode, limit width to improve readability
+  // In centered mode, limit width for better readability
   const centeredMode = isCentered();
   const historyContainer = new BoxRenderable(renderer, {
-    width: centeredMode ? "90%" : "100%",
-    maxWidth: centeredMode ? 90 : "100%",
+    width: "100%",
     height: "auto",
     flexDirection: "column",
     paddingX: 2,
     gap: 1,
-    alignItems: centeredMode ? "center" : "stretch",
   });
 
   // AGENT: Banner container - centers the brand and subtitle
@@ -352,7 +350,7 @@ async function main() {
 
   // AGENT: ScrollBox wraps history container - enables vertical scrolling for long chats
   const scrollBox = new ScrollBoxRenderable(renderer, {
-    width: "100%",
+    width: centeredMode ? "90%" : "100%",
     flexGrow: 1,
     scrollY: true,
     stickyScroll: true,
@@ -362,7 +360,7 @@ async function main() {
 
   // AGENT: Input container - box with border wrapping the text input
   const inputContainer = new BoxRenderable(renderer, {
-    width: "100%",
+    width: centeredMode ? "90%" : "100%",
     paddingX: 2,
     height: 1
   });
@@ -689,6 +687,7 @@ async function main() {
     flexDirection: "column",
     padding: 1,
     gap: 1,
+    alignItems: centeredMode ? "center" : "stretch",
   });
 
   // Add all children to content container in order: figlet -> title -> scroll/history -> input

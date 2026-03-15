@@ -5,7 +5,7 @@ import { setDefaultModel, parseDefaultModel, getAllModels } from "../config.js";
 /**
  * Model Command
  * Allows selecting and switching between available Ollama models
- * Categorizes models as "Configured" or "Inferred"
+ * Categorizes models by provider and configured/inferred status
  */
 export class ModelCommand extends Command {
   private _ui: UIImplementation;
@@ -47,31 +47,58 @@ export class ModelCommand extends Command {
         return;
       }
 
-      // Get configured models
+      // Get configured models by provider
       const configuredModels = getAllModels();
-      const configuredNames = new Set(configuredModels.map(m => m.name));
-
-      // Categorize models
-      const configured: string[] = [];
-      const inferred: string[] = [];
-
+      
+      // Build sets for quick lookup
+      const configuredModelNames = new Set(configuredModels.map(m => m.name));
+      
+      // Separate configured vs inferred, then group by provider
+      const configuredByProvider = new Map<string, string[]>();
+      const inferredByProvider = new Map<string, string[]>();
+      
       for (const name of modelNames) {
-        if (configuredNames.has(name)) {
-          configured.push(name);
+        if (configuredModelNames.has(name)) {
+          // Find which provider this model belongs to
+          const modelConfig = configuredModels.find(m => m.name === name);
+          const prov = modelConfig?.provider || "ollama";
+          if (!configuredByProvider.has(prov)) {
+            configuredByProvider.set(prov, []);
+          }
+          configuredByProvider.get(prov)!.push(name);
         } else {
-          inferred.push(name);
+          // Inferred - assign to default "ollama" provider for now
+          // Could be enhanced to detect provider from model name patterns
+          if (!inferredByProvider.has("ollama")) {
+            inferredByProvider.set("ollama", []);
+          }
+          inferredByProvider.get("ollama")!.push(name);
         }
       }
 
-      // Build items with category headers (matching command category style)
+      // Build items with nested categories: Configured > provider > models, Inferred > provider > models
       const items: string[] = [];
-      if (configured.length > 0) {
+      
+      // Configured section
+      if (configuredByProvider.size > 0) {
         items.push("⚙ Configured");
-        items.push(...configured);
+        for (const [prov, modelList] of configuredByProvider) {
+          items.push(`⚙   ${prov}`);
+          for (const m of modelList) {
+            items.push(m);
+          }
+        }
       }
-      if (inferred.length > 0) {
+      
+      // Inferred section
+      if (inferredByProvider.size > 0) {
         items.push("🔮 Inferred");
-        items.push(...inferred);
+        for (const [prov, modelList] of inferredByProvider) {
+          items.push(`🔮   ${prov}`);
+          for (const m of modelList) {
+            items.push(m);
+          }
+        }
       }
 
       // Show selection UI
@@ -80,8 +107,8 @@ export class ModelCommand extends Command {
         items,
         current: currentModel,
       }).then((selected) => {
-        // Skip category headers
-        if (selected && !selected.includes(" ") && !selected.startsWith("⚙") && !selected.startsWith("🔮")) {
+        // Skip category headers (items starting with emoji or with emoji prefix followed by only spaces)
+        if (selected && !/^[⚙🔮]/.test(selected) && !/^[⚙🔮]\s+$/.test(selected)) {
           setDefaultModel(provider, selected);
           const newModel = `${provider}/${selected}`;
           this._ui.showNotification?.(`Model: ${selected}`);

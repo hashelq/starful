@@ -465,26 +465,37 @@ export class PromptModal {
   private _buildSelectItems(): void {
     if (this._mode.type !== "select") return;
 
-    // For select mode, treat items starting with emoji (category headers) differently
-    // Also support "--- Category ---" format for backwards compatibility
+    // For select mode, treat items starting with emoji as category headers
+    // Support 2 levels:
+    // - Top category: "⚙ Configured" or "🔮 Inferred"  
+    // - Subcategory: "⚙   ollama" or "🔮   ollama" (with 3+ spaces after emoji)
     this._filteredItems = this._mode.items.map((item, index) => {
-      // Check if it's a category header (starts with emoji or "---")
-      const isCategory = /^[\u{1F300}-\u{1F9FF}]|^[⚙🔮📁💡]/u.test(item) || item.startsWith("---");
+      // Check for top category (emoji followed by space then text, no extra spaces)
+      const topCategoryMatch = item.match(/^([⚙🔮📁💡])\s+(\S.*)$/);
+      // Check for subcategory (emoji followed by 3+ spaces then text)
+      const subCategoryMatch = item.match(/^([⚙🔮📁💡])\s{3,}(\S.*)$/);
       
-      if (isCategory) {
-        // Clean up the category name
-        const title = item.replace(/^--- /, "").replace(/ ---$/, "");
+      if (subCategoryMatch) {
+        // Subcategory - less prominent
         return {
           type: "category" as const,
-          title: `  ${title}`,
+          title: `    ${subCategoryMatch[2]}`,
+          index,
+        };
+      } else if (topCategoryMatch) {
+        // Top category - prominent
+        return {
+          type: "category" as const,
+          title: `  ${topCategoryMatch[2]}`,
           index,
         };
       }
       
+      // Regular item
       return {
         type: "item" as const,
         id: item,
-        label: `    ${item}`,
+        label: `      ${item}`,
         index,
       };
     });

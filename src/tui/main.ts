@@ -36,6 +36,7 @@ import {
 import { COLORS, initColors } from "../engine/colors.js";
 import { getTheme as getThemeFromConfig } from "../engine/ui-config.js";
 import { subscribeToThemeChanges } from "../engine/theme.js";
+import { getPromptHistory } from "../engine/prompt-history.js";
 import { TUIState } from "./state.js";
 import { loadConfig } from "../engine/config.js";
 import { MockOllamaClient } from "../engine/llm/implementations/mock-ollama-client.js";
@@ -648,6 +649,28 @@ async function main() {
 
       return true;
     }
+
+    // Handle Up arrow - previous history
+    if (key.name === "up") {
+      const history = getPromptHistory();
+      const prev = history.previous();
+      if (prev) {
+        input.value = prev;
+      }
+      return true;
+    }
+
+    // Handle Down arrow - next history
+    if (key.name === "down") {
+      const history = getPromptHistory();
+      const next = history.next();
+      input.value = next;
+      return true;
+    }
+
+    // Reset history index when user starts typing
+    getPromptHistory().resetIndex();
+
     return false;
   };
 
@@ -655,6 +678,9 @@ async function main() {
     const value = val.trim();
 
     if (value && !appState.isGenerating) {
+      // Save to prompt history
+      getPromptHistory().add(value);
+
       // Add user message to history
       addStaticMessage("user", ` ${value}`);
 

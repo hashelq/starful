@@ -339,6 +339,7 @@ export class StatusMatrix {
   
   private _updateLabel(): void {
     const anim = this._animations[this._currentAnimIndex];
+    
     if (!anim) return;
     
     const name = anim.name;
@@ -375,7 +376,6 @@ export class StatusMatrix {
       
       const anim = this._animations[this._currentAnimIndex];
       if (!anim) return;
-      console.log(anim.name);
       
       for (let y = 0; y < height; y++) {
         const row = this._grid[y];

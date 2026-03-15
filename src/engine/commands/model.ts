@@ -63,14 +63,14 @@ export class ModelCommand extends Command {
         }
       }
 
-      // Build items with category headers
+      // Build items with category headers (matching command category style)
       const items: string[] = [];
       if (configured.length > 0) {
-        items.push("--- Configured ---");
+        items.push("⚙ Configured");
         items.push(...configured);
       }
       if (inferred.length > 0) {
-        items.push("--- Inferred ---");
+        items.push("🔮 Inferred");
         items.push(...inferred);
       }
 
@@ -80,7 +80,8 @@ export class ModelCommand extends Command {
         items,
         current: currentModel,
       }).then((selected) => {
-        if (selected && !selected.startsWith("---")) {
+        // Skip category headers
+        if (selected && !selected.includes(" ") && !selected.startsWith("⚙") && !selected.startsWith("🔮")) {
           setDefaultModel(provider, selected);
           const newModel = `${provider}/${selected}`;
           this._ui.showNotification?.(`Model: ${selected}`);

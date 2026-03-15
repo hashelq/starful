@@ -20,7 +20,7 @@ import { setFocused, setUnfocused } from "../state.js";
  * Tree node for command list (can be category header or command)
  */
 type PromptTreeNode =
-  | { type: "category"; category: CommandCategory; index: number }
+  | { type: "category"; category?: CommandCategory; title?: string; index: number }
   | { type: "item"; id: string; label: string; index: number };
 
 /**
@@ -465,12 +465,29 @@ export class PromptModal {
   private _buildSelectItems(): void {
     if (this._mode.type !== "select") return;
 
-    this._filteredItems = this._mode.items.map((item, index) => ({
-      type: "item" as const,
-      id: item,
-      label: item,
-      index,
-    }));
+    // For select mode, treat items starting with emoji (category headers) differently
+    // Also support "--- Category ---" format for backwards compatibility
+    this._filteredItems = this._mode.items.map((item, index) => {
+      // Check if it's a category header (starts with emoji or "---")
+      const isCategory = /^[\u{1F300}-\u{1F9FF}]|^[⚙🔮📁💡]/u.test(item) || item.startsWith("---");
+      
+      if (isCategory) {
+        // Clean up the category name
+        const title = item.replace(/^--- /, "").replace(/ ---$/, "");
+        return {
+          type: "category" as const,
+          title: `  ${title}`,
+          index,
+        };
+      }
+      
+      return {
+        type: "item" as const,
+        id: item,
+        label: `    ${item}`,
+        index,
+      };
+    });
   }
 
   /**
@@ -490,8 +507,10 @@ export class PromptModal {
     // Render nodes
     for (const node of this._filteredItems) {
       if (node.type === "category") {
+        // Use title if provided, otherwise fallback to category
+        const title = node.title || (node.category ? `${node.category.icon || ""} ${node.category.name}` : "");
         const header = new TextRenderable(this._renderer, {
-          content: `  ${node.category.icon || ""} ${node.category.name}`,
+          content: `  ${title}`,
           width: "100%",
           flexGrow: 1,
           flexShrink: 0,

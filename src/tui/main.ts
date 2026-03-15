@@ -34,7 +34,7 @@ import {
   type CommandRegistry,
 } from "../engine/commands/index.js";
 import { COLORS, initColors } from "../engine/colors.js";
-import { getTheme as getThemeFromConfig, isCentered } from "../engine/ui-config.js";
+import { getTheme as getThemeFromConfig, isCentered, getCenteredWidth } from "../engine/ui-config.js";
 import { subscribeToThemeChanges } from "../engine/theme.js";
 import { TUIState } from "./state.js";
 import { loadConfig } from "../engine/config.js";
@@ -310,6 +310,7 @@ async function main() {
   // AGENT: History container - holds all chat messages in a column layout
   // In centered mode, limit width for better readability
   const centeredMode = isCentered();
+  const centeredWidth = centeredMode ? getCenteredWidth() : "100%";
   const historyContainer = new BoxRenderable(renderer, {
     width: "100%",
     height: "auto",
@@ -350,7 +351,7 @@ async function main() {
 
   // AGENT: ScrollBox wraps history container - enables vertical scrolling for long chats
   const scrollBox = new ScrollBoxRenderable(renderer, {
-    width: centeredMode ? "90%" : "100%",
+    width: centeredWidth,
     flexGrow: 1,
     scrollY: true,
     stickyScroll: true,
@@ -360,7 +361,7 @@ async function main() {
 
   // AGENT: Input container - box with border wrapping the text input
   const inputContainer = new BoxRenderable(renderer, {
-    width: centeredMode ? "90%" : "100%",
+    width: centeredWidth,
     paddingX: 2,
     height: 1
   });

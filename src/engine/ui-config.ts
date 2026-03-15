@@ -8,6 +8,7 @@ import path from "node:path";
 export interface UIConfig {
   theme: string;
   centered: boolean;
+  centeredWidth?: number;
 }
 
 /**
@@ -16,6 +17,7 @@ export interface UIConfig {
 export const DEFAULT_UI_CONFIG: UIConfig = {
   theme: "catppuccin",
   centered: false,
+  centeredWidth: 90,
 };
 
 /**
@@ -96,6 +98,14 @@ export function setTheme(theme: string): void {
 export function isCentered(): boolean {
   const config = loadUIConfig();
   return config.centered;
+}
+
+/**
+ * Get centered width from UI config (in characters)
+ */
+export function getCenteredWidth(): number {
+  const config = loadUIConfig();
+  return config.centeredWidth ?? 90;
 }
 
 /**

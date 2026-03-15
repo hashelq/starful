@@ -112,7 +112,12 @@ async function main() {
           if (!input.value.trim()) {
             return false; // Let it propagate to exit
           }
-          return true; // Otherwise consume the Ctrl+C
+          return true; // Consume to prevent exit when input has content
+        }
+        
+        // Check for Ctrl+Q - quit the app
+        if (key && key.ctrl && key.name === "q") {
+          cleanup();
         }
 
         // Check for Ctrl+P
@@ -121,13 +126,13 @@ async function main() {
           return true; // Stop propagation
         }
 
-        // Check for Enter key on empty input - don't exit, just ignore
-        if (key && key.name === "enter" && !input.value.trim()) {
-          return true; // Consume the event, don't exit
+        // Global keyboard handler: focus input when typing
+        // This allows modals to capture keyboard events when visible
+        if (TUIState.currentInputFocused) {
+          TUIState.currentInputFocused.focus();
+        } else {
+          input.focus();
         }
-
-        // Let other keys pass through to the input - don't call focus() here
-        // as it interferes with normal typing
         return false;
       },
     ],

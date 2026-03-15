@@ -1,5 +1,5 @@
-import { OllamaClient } from "./llm/implementations/ollama-client";
-import type { ChatMessage } from "./llm/types/api-types";
+import { OllamaClient } from "./engine/llm/implementations/ollama-client";
+import type { ChatMessage } from "./engine/llm/types/api-types";
 
 let ollama = new OllamaClient({ host: "localhost", port: 11434 });
 

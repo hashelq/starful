@@ -413,10 +413,8 @@ Start by asking me something!`;
     maxWidth: centeredWidth,
     paddingX: 2,
     paddingY: 1,
-    height: 1,
-    backgroundColor: COLORS.surface,
-    border: true,
-    borderColor: COLORS.border,
+    height: 3,
+    backgroundColor: COLORS.surfaceAlt,
     marginBottom: 1,
   });
 
@@ -766,6 +764,12 @@ Start by asking me something!`;
       renderable: mainContainer,
       prop: "backgroundColor",
       colorKey: "background",
+    },
+    // Input container background
+    {
+      renderable: inputContainer,
+      prop: "backgroundColor",
+      colorKey: "surfaceAlt",
     },
     // Input colors - no background when typing
     { renderable: promptInput.input, prop: "textColor", colorKey: "inputText" },

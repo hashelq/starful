@@ -94,9 +94,7 @@ import {
 
 /**
  * StatusMatrix - Animated ASCII matrix at the bottom of sidebar
- * Cycles through different animations randomly
- * - Slow cycle (10s) when idle
- * - Fast cycle (1s) when generating
+ * Displays animations with dynamic timing based on generation state
  */
 export class StatusMatrix {
   private _container: BoxRenderable;
@@ -105,14 +103,10 @@ export class StatusMatrix {
   private _animations: Animation[] = [];
   private _tick = 0;
   private _animationInterval: any = null;
-  private _cycleInterval: any = null;
   private _isGeneratingFn: () => boolean;
   private _currentAnimIndex = 0;
-  private _lastAnimIndex = -1;
   
   // Timing constants
-  private static readonly IDLE_CYCLE_MS = 10000;
-  private static readonly GENERATING_CYCLE_MS = 1000;
   private static readonly IDLE_TICK_MS = 80;
   private static readonly GENERATING_TICK_MS = 40;
   
@@ -257,39 +251,8 @@ export class StatusMatrix {
     // Start animation loop
     this._startAnimation(gridWidth, gridHeight);
     
-    // Start cycling - will be adjusted based on generating state
-    this._startCycling();
-  }
-  
-  private _getRandomAnimIndex(): number {
-    // Pick a random index different from the current one
-    let newIndex;
-    do {
-      newIndex = Math.floor(Math.random() * this._animations.length);
-    } while (newIndex === this._currentAnimIndex && this._animations.length > 1);
-    return newIndex;
-  }
-  
-  private _startCycling(): void {
-    // Initial random animation
-    this._currentAnimIndex = this._getRandomAnimIndex();
-    
-    const cycle = () => {
-      const isGenerating = this._isGeneratingFn();
-      
-      // Pick a new random animation
-      this._currentAnimIndex = this._getRandomAnimIndex();
-      
-      // Set next cycle interval based on generating state
-      const interval = isGenerating 
-        ? StatusMatrix.GENERATING_CYCLE_MS 
-        : StatusMatrix.IDLE_CYCLE_MS;
-      
-      this._cycleInterval = setTimeout(cycle, interval);
-    };
-    
-    // Start with initial delay
-    this._cycleInterval = setTimeout(cycle, StatusMatrix.IDLE_CYCLE_MS);
+    // Pick initial random animation (stays the same, no cycling)
+    this._currentAnimIndex = Math.floor(Math.random() * this._animations.length);
   }
   
   private _startAnimation(width: number, height: number): void {
@@ -342,6 +305,5 @@ export class StatusMatrix {
   
   destroy(): void {
     if (this._animationInterval) clearTimeout(this._animationInterval);
-    if (this._cycleInterval) clearTimeout(this._cycleInterval);
   }
 }

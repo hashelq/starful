@@ -3,6 +3,7 @@ import { COLORS } from "../../engine/colors.js";
 import { subscribeToThemeChanges } from "../../engine/theme.js";
 import { getSidebarRegistry, createCategoryId, createButtonId, type SidebarCategory } from "./sidebar/index.js";
 import { SidebarCategory as SidebarCategoryClass } from "./sidebar/category.js";
+import { StatusMatrix } from "./sidebar/status-matrix/index.js";
 
 /**
  * SideBar - Main sidebar component using the registry system
@@ -58,8 +59,9 @@ export class SideBar {
     this._scrollBox.add(this._sectionsContainer);
     this._pane.add(this._scrollBox);
 
-    // Create 8x8 animation matrix at bottom of sidebar
-    this._pane.add(this._createAnimationMatrix());
+    // Create animated status matrix at bottom of sidebar
+    const statusMatrix = new StatusMatrix(renderer, this._width);
+    this._pane.add(statusMatrix.renderable);
 
     // Build categories from registry
     this._buildCategories(options?.onNavigate);
@@ -141,102 +143,6 @@ export class SideBar {
    */
   get renderable(): BoxRenderable {
     return this._pane;
-  }
-
-  /**
-   * Create 8x8 animation matrix at bottom of sidebar
-   */
-  private _createAnimationMatrix(): BoxRenderable {
-    const matrixContainer = new BoxRenderable(this._renderer, {
-      width: "100%",
-      height: "auto",
-      flexDirection: "column",
-      gap: 0,
-    });
-
-    // Single characters for each cell (like a pixel)
-    const chars = " .·:;+*#@";
-    
-    // Calculate grid size based on sidebar width (1 y ≈ 1.5 x)
-    const gridWidth = this._width - 2; // Account for padding
-    const gridHeight = Math.floor(gridWidth / 1.5);
-    
-    // Create grid - create rows first
-    const grid: TextRenderable[][] = [];
-    for (let y = 0; y < gridHeight; y++) {
-      const row = new BoxRenderable(this._renderer, {
-        width: "100%",
-        flexDirection: "row",
-        justifyContent: "center",
-        gap: 0,
-      });
-      
-      const rowCells: TextRenderable[] = [];
-      for (let x = 0; x < gridWidth; x++) {
-        const cell = new TextRenderable(this._renderer, {
-          content: " ",
-          fg: COLORS.textMuted,
-        });
-        rowCells.push(cell);
-        row.add(cell);
-      }
-      grid.push(rowCells);
-      matrixContainer.add(row);
-    }
-
-    // Animation state
-    let frame = 0;
-    let interval: any = null;
-
-    // Start animation when visible
-    const startAnimation = () => {
-      if (interval) return;
-      interval = setInterval(() => {
-        frame++;
-        for (let y = 0; y < gridHeight; y++) {
-          for (let x = 0; x < gridWidth; x++) {
-            const cell = grid[y]?.[x];
-            if (!cell) continue;
-            
-            // Generate wave pattern based on position and time
-            const val = Math.floor(
-              (Math.sin(x * 0.3 + frame * 0.1) * Math.cos(y * 0.3 + frame * 0.08) + 1) * 5
-            );
-            const charIdx = Math.min(val, chars.length - 1);
-            const char = chars[charIdx] || " ";
-            cell.content = char;
-            
-            // Color gradient from muted to accent based on intensity
-            if (val > 7) {
-              cell.fg = COLORS.accent;
-            } else if (val > 4) {
-              cell.fg = COLORS.text;
-            } else {
-              cell.fg = COLORS.textMuted;
-            }
-          }
-        }
-        this._renderer.requestRender?.();
-      }, 100);
-    };
-
-    const stopAnimation = () => {
-      if (interval) {
-        clearInterval(interval);
-        interval = null;
-      }
-    };
-
-    // Start animation (stopAnimation reserved for future use)
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    startAnimation();
-
-    // Subscribe to theme changes
-    subscribeToThemeChanges([
-      { renderable: matrixContainer, prop: 'backgroundColor', colorKey: 'surface' },
-    ]);
-
-    return matrixContainer;
   }
 
   /**

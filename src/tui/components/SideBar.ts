@@ -1,4 +1,10 @@
-import { BoxRenderable, CliRenderer, TextRenderable, ScrollBoxRenderable, createTextAttributes } from "@opentui/core";
+import {
+  BoxRenderable,
+  CliRenderer,
+  TextRenderable,
+  ScrollBoxRenderable,
+  createTextAttributes,
+} from "@opentui/core";
 import { COLORS } from "../../engine/colors.js";
 import { subscribeToThemeChanges } from "../../engine/theme.js";
 
@@ -18,7 +24,7 @@ class PaneButton {
       icon: string;
       label: string;
       onClick?: () => void;
-    }
+    },
   ) {
     this._onClick = options.onClick;
 
@@ -84,7 +90,7 @@ class PaneSection {
     options: {
       title: string;
       buttons: Array<{ icon: string; label: string; onClick?: () => void }>;
-    }
+    },
   ) {
     this._renderer = renderer;
 
@@ -129,7 +135,9 @@ class PaneSection {
 
     this._headerBox.onMouseOut = () => {
       // Restore based on folded state
-      this._headerBox.backgroundColor = this._folded ? COLORS.surfaceAlt : COLORS.buttonBg;
+      this._headerBox.backgroundColor = this._folded
+        ? COLORS.surfaceAlt
+        : COLORS.buttonBg;
       this._renderer.requestRender?.();
     };
 
@@ -167,10 +175,12 @@ class PaneSection {
   toggle(): void {
     this._folded = !this._folded;
     this._buttonsContainer.visible = !this._folded;
-    
+
     // Brighter background when unfolded
-    this._headerBox.backgroundColor = this._folded ? COLORS.surfaceAlt : COLORS.buttonBg;
-    
+    this._headerBox.backgroundColor = this._folded
+      ? COLORS.surfaceAlt
+      : COLORS.buttonBg;
+
     this._renderer.requestRender?.();
   }
 
@@ -202,7 +212,7 @@ export class SideBar {
       width?: number;
       threshold?: number;
       onNavigate?: (section: string) => void;
-    }
+    },
   ) {
     this._renderer = renderer;
     this._width = options?.width ?? 30;
@@ -240,7 +250,11 @@ export class SideBar {
 
     // Subscribe to theme changes
     subscribeToThemeChanges([
-      { renderable: this._pane, prop: 'backgroundColor', colorKey: 'surfaceAlt' },
+      {
+        renderable: this._pane,
+        prop: "backgroundColor",
+        colorKey: "surfaceAlt",
+      },
     ]);
 
     // Set initial visibility
@@ -253,6 +267,18 @@ export class SideBar {
   }
 
   private _buildSections(onNavigate?: (section: string) => void): void {
+    // === THIS WORKSPACE ===
+    const workspaceSection = new PaneSection(this._renderer, {
+      title: "This Workspace",
+      buttons: [
+        { icon: "💬", label: "Chats", onClick: () => this._handleNav("chats", onNavigate) },
+        { icon: "📊", label: "Visualize", onClick: () => this._handleNav("visualize", onNavigate) },
+        { icon: "⚙️", label: "Project Config", onClick: () => this._handleNav("projectconfig", onNavigate) },
+      ],
+    });
+    this._sections.push(workspaceSection);
+    this._sectionsContainer.add(workspaceSection.renderable);
+
     // === AI & CHAT ===
     const aiSection = new PaneSection(this._renderer, {
       title: "AI & Chat",
@@ -268,12 +294,38 @@ export class SideBar {
 
     // === WORKFLOWS ===
     const workflowsSection = new PaneSection(this._renderer, {
-      title: "Workflows",
+      title: "Config",
       buttons: [
-        { icon: "🔄", label: "Pipeline", onClick: () => this._handleNav("pipeline", onNavigate) },
-        { icon: "⚙️", label: "Tasks", onClick: () => this._handleNav("tasks", onNavigate) },
-        { icon: "📋", label: "Templates", onClick: () => this._handleNav("templates", onNavigate) },
-        { icon: "▶️", label: "Run History", onClick: () => this._handleNav("runhistory", onNavigate) },
+        {
+          icon: "🤖",
+          label: "Agents",
+          onClick: () => this._handleNav("agents", onNavigate),
+        },
+        {
+          icon: "🧠",
+          label: "Models",
+          onClick: () => this._handleNav("models", onNavigate),
+        },
+        {
+          icon: "⚡",
+          label: "Aliases",
+          onClick: () => this._handleNav("aliases", onNavigate),
+        },
+        {
+          icon: "🔄",
+          label: "Pipelines",
+          onClick: () => this._handleNav("pipelines", onNavigate),
+        },
+        {
+          icon: "📋",
+          label: "Templates",
+          onClick: () => this._handleNav("templates", onNavigate),
+        },
+        {
+          icon: "▶️",
+          label: "Run History",
+          onClick: () => this._handleNav("runhistory", onNavigate),
+        },
       ],
     });
     this._sections.push(workflowsSection);
@@ -283,11 +335,31 @@ export class SideBar {
     const devSection = new PaneSection(this._renderer, {
       title: "Development",
       buttons: [
-        { icon: "📁", label: "Files", onClick: () => this._handleNav("files", onNavigate) },
-        { icon: "💻", label: "Terminal", onClick: () => this._handleNav("terminal", onNavigate) },
-        { icon: "🔧", label: "Debug", onClick: () => this._handleNav("debug", onNavigate) },
-        { icon: "🐙", label: "Git", onClick: () => this._handleNav("git", onNavigate) },
-        { icon: "📦", label: "Packages", onClick: () => this._handleNav("packages", onNavigate) },
+        {
+          icon: "📁",
+          label: "Files",
+          onClick: () => this._handleNav("files", onNavigate),
+        },
+        {
+          icon: "💻",
+          label: "Terminal",
+          onClick: () => this._handleNav("terminal", onNavigate),
+        },
+        {
+          icon: "🔧",
+          label: "Debug",
+          onClick: () => this._handleNav("debug", onNavigate),
+        },
+        {
+          icon: "🐙",
+          label: "Git",
+          onClick: () => this._handleNav("git", onNavigate),
+        },
+        {
+          icon: "📦",
+          label: "Packages",
+          onClick: () => this._handleNav("packages", onNavigate),
+        },
       ],
     });
     this._sections.push(devSection);
@@ -297,11 +369,31 @@ export class SideBar {
     const autoSection = new PaneSection(this._renderer, {
       title: "Automation",
       buttons: [
-        { icon: "🔌", label: "API Test", onClick: () => this._handleNav("apitest", onNavigate) },
-        { icon: "🗄️", label: "Database", onClick: () => this._handleNav("database", onNavigate) },
-        { icon: "🔐", label: "Secrets", onClick: () => this._handleNav("secrets", onNavigate) },
-        { icon: "📨", label: "Webhooks", onClick: () => this._handleNav("webhooks", onNavigate) },
-        { icon: "⏰", label: "Cron Jobs", onClick: () => this._handleNav("cron", onNavigate) },
+        {
+          icon: "🔌",
+          label: "API Test",
+          onClick: () => this._handleNav("apitest", onNavigate),
+        },
+        {
+          icon: "🗄️",
+          label: "Database",
+          onClick: () => this._handleNav("database", onNavigate),
+        },
+        {
+          icon: "🔐",
+          label: "Secrets",
+          onClick: () => this._handleNav("secrets", onNavigate),
+        },
+        {
+          icon: "📨",
+          label: "Webhooks",
+          onClick: () => this._handleNav("webhooks", onNavigate),
+        },
+        {
+          icon: "⏰",
+          label: "Cron Jobs",
+          onClick: () => this._handleNav("cron", onNavigate),
+        },
       ],
     });
     this._sections.push(autoSection);
@@ -311,10 +403,26 @@ export class SideBar {
     const analyticsSection = new PaneSection(this._renderer, {
       title: "Analytics",
       buttons: [
-        { icon: "📊", label: "Dashboard", onClick: () => this._handleNav("dashboard", onNavigate) },
-        { icon: "📈", label: "Metrics", onClick: () => this._handleNav("metrics", onNavigate) },
-        { icon: "🔍", label: "Logs", onClick: () => this._handleNav("logs", onNavigate) },
-        { icon: "🚨", label: "Alerts", onClick: () => this._handleNav("alerts", onNavigate) },
+        {
+          icon: "📊",
+          label: "Dashboard",
+          onClick: () => this._handleNav("dashboard", onNavigate),
+        },
+        {
+          icon: "📈",
+          label: "Metrics",
+          onClick: () => this._handleNav("metrics", onNavigate),
+        },
+        {
+          icon: "🔍",
+          label: "Logs",
+          onClick: () => this._handleNav("logs", onNavigate),
+        },
+        {
+          icon: "🚨",
+          label: "Alerts",
+          onClick: () => this._handleNav("alerts", onNavigate),
+        },
       ],
     });
     this._sections.push(analyticsSection);
@@ -324,11 +432,31 @@ export class SideBar {
     const settingsSection = new PaneSection(this._renderer, {
       title: "Settings",
       buttons: [
-        { icon: "⚙️", label: "Preferences", onClick: () => this._handleNav("preferences", onNavigate) },
-        { icon: "🎨", label: "Themes", onClick: () => this._handleNav("themes", onNavigate) },
-        { icon: "🔌", label: "Extensions", onClick: () => this._handleNav("extensions", onNavigate) },
-        { icon: "❓", label: "Help", onClick: () => this._handleNav("help", onNavigate) },
-        { icon: "ℹ️", label: "About", onClick: () => this._handleNav("about", onNavigate) },
+        {
+          icon: "⚙️",
+          label: "Preferences",
+          onClick: () => this._handleNav("preferences", onNavigate),
+        },
+        {
+          icon: "🎨",
+          label: "Themes",
+          onClick: () => this._handleNav("themes", onNavigate),
+        },
+        {
+          icon: "🔌",
+          label: "Extensions",
+          onClick: () => this._handleNav("extensions", onNavigate),
+        },
+        {
+          icon: "❓",
+          label: "Help",
+          onClick: () => this._handleNav("help", onNavigate),
+        },
+        {
+          icon: "ℹ️",
+          label: "About",
+          onClick: () => this._handleNav("about", onNavigate),
+        },
       ],
     });
     this._sections.push(settingsSection);
@@ -338,7 +466,10 @@ export class SideBar {
     this._updateSelection();
   }
 
-  private _handleNav(section: string, onNavigate?: (section: string) => void): void {
+  private _handleNav(
+    section: string,
+    onNavigate?: (section: string) => void,
+  ): void {
     this._activeButton = section;
     this._updateSelection();
     onNavigate?.(section);
@@ -354,12 +485,33 @@ export class SideBar {
 
     // Find and select the active button
     const sectionMap: Record<string, string> = {
-      "Chat": "chat", "Agents": "agents", "Models": "models", "Prompts": "prompts",
-      "Pipeline": "pipeline", "Tasks": "tasks", "Templates": "templates", "Run History": "runhistory",
-      "Files": "files", "Terminal": "terminal", "Debug": "debug", "Git": "git", "Packages": "packages",
-      "API Test": "apitest", "Database": "database", "Secrets": "secrets", "Webhooks": "webhooks", "Cron Jobs": "cron",
-      "Dashboard": "dashboard", "Metrics": "metrics", "Logs": "logs", "Alerts": "alerts",
-      "Preferences": "preferences", "Themes": "themes", "Extensions": "extensions", "Help": "help", "About": "about",
+      Chat: "chat",
+      Agents: "agents",
+      Models: "models",
+      Prompts: "prompts",
+      Pipeline: "pipeline",
+      Tasks: "tasks",
+      Templates: "templates",
+      "Run History": "runhistory",
+      Files: "files",
+      Terminal: "terminal",
+      Debug: "debug",
+      Git: "git",
+      Packages: "packages",
+      "API Test": "apitest",
+      Database: "database",
+      Secrets: "secrets",
+      Webhooks: "webhooks",
+      "Cron Jobs": "cron",
+      Dashboard: "dashboard",
+      Metrics: "metrics",
+      Logs: "logs",
+      Alerts: "alerts",
+      Preferences: "preferences",
+      Themes: "themes",
+      Extensions: "extensions",
+      Help: "help",
+      About: "about",
     };
 
     for (const section of this._sections) {
@@ -370,7 +522,7 @@ export class SideBar {
         }
       }
     }
-    
+
     this._renderer.requestRender?.();
   }
 

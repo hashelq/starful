@@ -14,9 +14,9 @@ export class FractalAnimation extends Animation {
     const t = tick * this.config.speed;
     
     // Recursive subdivision pattern
-    const scale = 8;
-    const xScaled = x / scale;
-    const yScaled = y / scale;
+    const scale = 1;
+    const xScaled = x / scale + tick;
+    const yScaled = y / scale + tick + Math.floor(Math.random() * 4);
     
     // Sierpinski-like pattern
     const fractal = (xScaled + t) & (yScaled + t);

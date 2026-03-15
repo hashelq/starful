@@ -11,7 +11,7 @@ import {
   parseKeypress,
   createTextAttributes,
 } from "@opentui/core";
-import { OllamaClient } from "../llm/implementations/ollama-client.js";
+import { OllamaClient } from "../engine/llm/implementations/ollama-client.js";
 import { CodeBlock } from "./components/CodeBlock.js";
 import {
   createMarkdownRenderable,
@@ -38,7 +38,7 @@ import { getTheme as getThemeFromConfig } from "../engine/ui-config.js";
 import { subscribeToThemeChanges } from "../engine/theme.js";
 import { TUIState } from "./state.js";
 import { loadConfig } from "../engine/config.js";
-import { MockOllamaClient } from "../llm/implementations/mock-ollama-client.js";
+import { MockOllamaClient } from "../engine/llm/implementations/mock-ollama-client.js";
 
 // ============================================================================
 // Types
@@ -519,7 +519,15 @@ async function main() {
         // If nothing started yet, just silently cancel
       } else {
         // Real error - show it (but filter out timeout errors)
-        const errorMessage = error instanceof Error ? error.message : "Failed to connect to Ollama. Make sure it's running on localhost:11434";
+        let errorMessage = error instanceof Error ? error.message : "Ollama is not running";
+        
+        // Make error message more friendly
+        if (errorMessage.includes("ECONNREFUSED")) {
+          errorMessage = "Ollama is not running. Start it with 'ollama serve'";
+        } else if (errorMessage.includes("fetch failed") || errorMessage.includes("network")) {
+          errorMessage = "Could not connect to Ollama. Is it running on localhost:11434?";
+        }
+        
         // Don't show timeout errors in chat
         if (!errorMessage.includes("timed out") && !errorMessage.includes("timeout")) {
           const errorMsg = createErrorMessage(renderer, `Error: ${errorMessage}`);

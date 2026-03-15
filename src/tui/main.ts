@@ -14,11 +14,26 @@ import {
 import { OllamaClient } from "../llm/implementations/ollama-client.js";
 import { CodeBlock } from "./components/CodeBlock.js";
 import { getTextInRange } from "./utils/text-buffer.js";
-import { createMarkdownRenderable, getFormattedResponse, createThinkingElement, findCodeBlockDelimiter, createErrorMessage } from "./utils/chat-helpers.js";
+import {
+  createMarkdownRenderable,
+  getFormattedResponse,
+  createThinkingElement,
+  findCodeBlockDelimiter,
+  createErrorMessage,
+} from "./utils/chat-helpers.js";
 import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
-import { createPromptModal, type PromptModal } from "./components/PromptModal.js";
-import { SideBar, registerDefaultSidebarCategories } from "./components/SideBar.js";
-import { createCommandRegistry, type CommandRegistry } from "../engine/commands/index.js";
+import {
+  createPromptModal,
+  type PromptModal,
+} from "./components/PromptModal.js";
+import {
+  SideBar,
+  registerDefaultSidebarCategories,
+} from "./components/SideBar.js";
+import {
+  createCommandRegistry,
+  type CommandRegistry,
+} from "../engine/commands/index.js";
 import { COLORS, initColors } from "../engine/colors.js";
 import { getTheme as getThemeFromConfig } from "../engine/ui-config.js";
 import { subscribeToThemeChanges } from "../engine/theme.js";
@@ -85,7 +100,7 @@ async function main() {
       (sequence) => {
         // Parse key with Kitty keyboard protocol support
         const key = parseKeypress(sequence, { useKittyKeyboard: true });
-        
+
         // Check for Ctrl+C - cancel ongoing stream
         if (key && key.ctrl && key.name === "c") {
           if (isGenerating && currentAbortController) {
@@ -93,11 +108,14 @@ async function main() {
             notifications.show({ message: "Stream cancelled", type: "info" });
             return true; // Stop propagation
           }
-          // If not generating and input is empty, exit
-          if (!input.value.trim()) {
-            return false; // Let it propagate to exit
-          }
-          return true; // Otherwise consume the Ctrl+C
+          // If not generating, consume the event (user can use Ctrl+Q to exit)
+          return true;
+        }
+        
+        // Check for Ctrl+Q - quit the app
+        if (key && key.ctrl && key.name === "q") {
+          renderer.destroy();
+          process.exit(0);
         }
         
         // Check for Ctrl+P
@@ -105,12 +123,12 @@ async function main() {
           commandModal?.toggle();
           return true; // Stop propagation
         }
-        
+
         // Check for Enter key on empty input - don't exit, just ignore
         if (key && key.name === "enter" && !input.value.trim()) {
           return true; // Consume the event, don't exit
         }
-        
+
         // Let other keys pass through to the input - don't call focus() here
         // as it interferes with normal typing
         return false;
@@ -132,7 +150,11 @@ async function main() {
   {
     // Create TUI-specific UI implementation
     const tuiUI = {
-      promptSelect: async (options: { title: string; items: string[]; current?: string }) => {
+      promptSelect: async (options: {
+        title: string;
+        items: string[];
+        current?: string;
+      }) => {
         return new Promise<string | null>((resolve) => {
           const modal = createPromptModal(renderer, {
             mode: {
@@ -153,7 +175,7 @@ async function main() {
           modal.show();
         });
       },
-      
+
       showNotification: (message: string) => {
         notifications.show({ message });
       },
@@ -324,8 +346,13 @@ async function main() {
 
       // Create AbortController for cancelling the stream
       currentAbortController = new AbortController();
-      
-      const chatStream = await ollama.chat(config.model, messagesForOllama, undefined, currentAbortController.signal);
+
+      const chatStream = await ollama.chat(
+        config.model,
+        messagesForOllama,
+        undefined,
+        currentAbortController.signal,
+      );
       let inCode: boolean = false;
       let languageLabel: null | TextRenderable = null;
       let codeLang = "";
@@ -343,7 +370,10 @@ async function main() {
         if (chunk.message.thinking) {
           if (!thinkingStarted) {
             thinkingStarted = true;
-            streamingThinkingElement = createThinkingElement(renderer, historyContainer);
+            streamingThinkingElement = createThinkingElement(
+              renderer,
+              historyContainer,
+            );
           }
           thinking += chunk.message.thinking;
           streamingThinkingElement!.content = getFormattedResponse(
@@ -358,7 +388,10 @@ async function main() {
             contentStarted = true;
 
             // AGENT: Main content markdown (without code blocks - they get extracted)
-            streamingMarkdownContent = createMarkdownRenderable(renderer, treeSitterClient);
+            streamingMarkdownContent = createMarkdownRenderable(
+              renderer,
+              treeSitterClient,
+            );
 
             historyContainer.add(streamingMarkdownContent);
 
@@ -377,14 +410,12 @@ async function main() {
               content = content.substring(codeTagIndex + 3);
 
               // Create CodeBlock component
-              const codeBlock = new CodeBlock(
-                renderer,
-                treeSitterClient,
-                () => input.focus(),
+              const codeBlock = new CodeBlock(renderer, treeSitterClient, () =>
+                input.focus(),
               );
               const codeBlockDecorated = new BoxRenderable(renderer, {
                 border: true,
-                borderColor: COLORS.foreground
+                borderColor: COLORS.foreground,
               });
               codeBlockDecorated.add(codeBlock.renderable);
               historyContainer.add(codeBlockDecorated);
@@ -395,7 +426,10 @@ async function main() {
             } else {
               content = content.substring(codeTagIndex + 3);
 
-              streamingMarkdownContent = createMarkdownRenderable(renderer, treeSitterClient);
+              streamingMarkdownContent = createMarkdownRenderable(
+                renderer,
+                treeSitterClient,
+              );
               streamingMarkdownContent2Fold = null;
 
               historyContainer.add(streamingMarkdownContent);
@@ -426,14 +460,13 @@ async function main() {
       // Check if this was an abort (Ctrl+C)
       if (error instanceof Error && error.name === "AbortError") {
         // User cancelled - don't show error, just add a note if we started streaming
-        const hadContent = typeof contentStarted !== "undefined" && contentStarted;
-        const hadThinking = typeof thinkingStarted !== "undefined" && thinkingStarted;
-        
+        const hadContent =
+          typeof contentStarted !== "undefined" && contentStarted;
+        const hadThinking =
+          typeof thinkingStarted !== "undefined" && thinkingStarted;
+
         if (hadContent || hadThinking) {
-          const cancelMsg = createErrorMessage(
-            renderer,
-            "[Cancelled]",
-          );
+          const cancelMsg = createErrorMessage(renderer, "[Cancelled]");
           cancelMsg.fg = COLORS.textMuted; // Make it look like a muted message
           historyContainer.add(cancelMsg);
         }
@@ -457,8 +490,11 @@ async function main() {
     role: "user" | "assistant",
     content: string,
   ): TextRenderable {
-    const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    
+    const time = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
     if (role === "user") {
       // User message: row with content on left, timestamp on right
       const messageRow = new BoxRenderable(renderer, {
@@ -483,15 +519,15 @@ async function main() {
 
       // Subscribe message colors to theme changes
       subscribeToThemeChanges([
-        { renderable: messageText, prop: 'fg', colorKey: 'userText' },
-        { renderable: timestamp, prop: 'fg', colorKey: 'dimText' },
+        { renderable: messageText, prop: "fg", colorKey: "userText" },
+        { renderable: timestamp, prop: "fg", colorKey: "dimText" },
       ]);
 
       messageRow.add(messageText);
       messageRow.add(timestamp);
       historyContainer.add(messageRow);
       messages.push({ role, content, renderable: messageText });
-      
+
       renderer.requestRender?.();
       return messageText;
     } else {
@@ -503,7 +539,7 @@ async function main() {
 
       // Subscribe message colors to theme changes
       subscribeToThemeChanges([
-        { renderable: messageText, prop: 'fg', colorKey: 'assistantText' },
+        { renderable: messageText, prop: "fg", colorKey: "assistantText" },
       ]);
 
       historyContainer.add(messageText);
@@ -523,7 +559,7 @@ async function main() {
     textColor: COLORS.inputText,
     placeholderColor: COLORS.placeholderText,
   });
-  
+
   // Handle key events directly on the input
   input.onKeyDown = (key) => {
     // Handle Ctrl+C - cancel stream if generating, else consume to prevent exit
@@ -531,13 +567,17 @@ async function main() {
       if (isGenerating && currentAbortController) {
         currentAbortController.abort();
         notifications.show({ message: "Stream cancelled", type: "info" });
+      } else if (input.value.length) {
+        input.value = "abc";
+      } else {
+        renderer.stop();
       }
       // Always consume Ctrl+C to prevent exit
       return true;
     }
     return false;
   };
-  
+
   input.on(InputRenderableEvents.ENTER, async (val) => {
     const value = val.trim();
 
@@ -580,13 +620,13 @@ async function main() {
   // Left pane - hides on narrow terminals, with navigation callback
   // Register default sidebar categories first
   registerDefaultSidebarCategories();
-  
-  const sideBar = new SideBar(renderer, { 
-    width: 30, 
+
+  const sideBar = new SideBar(renderer, {
+    width: 30,
     threshold: 80,
     onNavigate: (section: string) => {
       notifications.show({ message: `Navigate to: ${section}`, type: "info" });
-    }
+    },
   });
 
   // Content container for the column layout (figlet, scrollbox, input)
@@ -615,16 +655,28 @@ async function main() {
   // Subscribe all color properties to theme changes for automatic updates
   subscribeToThemeChanges([
     // Main container background
-    { renderable: mainContainer, prop: 'backgroundColor', colorKey: 'background' },
+    {
+      renderable: mainContainer,
+      prop: "backgroundColor",
+      colorKey: "background",
+    },
     // Input colors - no background when typing
-    { renderable: input, prop: 'textColor', colorKey: 'inputText' },
-    { renderable: input, prop: 'placeholderColor', colorKey: 'placeholderText' },
+    { renderable: input, prop: "textColor", colorKey: "inputText" },
+    {
+      renderable: input,
+      prop: "placeholderColor",
+      colorKey: "placeholderText",
+    },
     // Figlet banner
-    { renderable: figletBanner, prop: 'color', colorKey: 'assistantText' },
+    { renderable: figletBanner, prop: "color", colorKey: "assistantText" },
     // Title text
-    { renderable: titleText, prop: 'fg', colorKey: 'dimText' },
+    { renderable: titleText, prop: "fg", colorKey: "dimText" },
     // History container (if has background)
-    { renderable: historyContainer, prop: 'backgroundColor', colorKey: 'background' },
+    {
+      renderable: historyContainer,
+      prop: "backgroundColor",
+      colorKey: "background",
+    },
   ]);
 
   // AGENT: Start render loop - blocks until process exits

@@ -89,7 +89,6 @@ export class PromptModal {
   private _selectedIndex: number = 0;
   private _visible: boolean = false;
   private _shadowBox: BoxRenderable;
-  private _leftBar: BoxRenderable;
 
   // AGENT: The fuzzy search happen automatically whenever user presses a key inside the input field. Be careful when changing this code.
   constructor(renderer: CliRenderer, options: PromptModalOptions) {
@@ -139,17 +138,6 @@ export class PromptModal {
       padding: 1,
     });
     centerWrapper.add(this._shadowBox);
-
-    // Left accent bar (colored vertical line)
-    this._leftBar = new BoxRenderable(renderer, {
-      width: 1,
-      height: "100%",
-      backgroundColor: COLORS.primary,
-      position: "absolute",
-      left: 0,
-      top: 0,
-    });
-    this._shadowBox.add(this._leftBar);
 
     // Modal box
     this._modalBox = new BoxRenderable(renderer, {
@@ -226,29 +214,10 @@ export class PromptModal {
       { renderable: this._searchInput, prop: 'textColor', colorKey: 'textInput' },
       { renderable: this._searchInput, prop: 'placeholderColor', colorKey: 'textInput' },
       { renderable: this._searchInput, prop: 'backgroundColor', colorKey: 'surface' },
-      { renderable: this._leftBar, prop: 'backgroundColor', colorKey: 'primary' },
     ]);
-
-    // Hide border on narrow terminals (< 70 chars) and update on resize
-    this._updateBorderVisibility();
-    this._renderer.on("resize", (_width: number, _height: number) => {
-      this._updateBorderVisibility();
-    });
 
     // Initially hidden
     this._overlay.visible = false;
-  }
-
-  /**
-   * Update border visibility based on terminal width
-   */
-  private _updateBorderVisibility(): void {
-    const terminalWidth = (this._renderer as any).terminalWidth || 80;
-    // Hide left bar if terminal is less than 70 characters wide
-    if (this._leftBar) {
-      this._leftBar.visible = terminalWidth >= 70;
-    }
-    this._renderer.requestRender?.();
   }
 
   /**

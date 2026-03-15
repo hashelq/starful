@@ -660,20 +660,23 @@ async function main() {
 
     // Handle Up arrow - previous in search or normal mode
     if (key.name === "up") {
-      if (history.isSearching) {
-        // Continue searching
-        const prev = history.searchPrevious();
-        if (prev) {
-          input.value = prev;
-        }
-      } else if (input.value) {
-        // Start search mode with current input as prefix
-        const result = history.startSearch(input.value);
-        if (result) {
-          input.value = result;
+      if (input.value) {
+        // If there's text in input, use search mode
+        if (history.isSearching) {
+          // Continue searching
+          const prev = history.searchPrevious();
+          if (prev) {
+            input.value = prev;
+          }
+        } else {
+          // Start search mode with current input as prefix
+          const result = history.startSearch(input.value);
+          if (result) {
+            input.value = result;
+          }
         }
       } else {
-        // Normal previous mode
+        // Empty input - normal previous mode
         const prev = history.previous();
         if (prev) {
           input.value = prev;
@@ -692,7 +695,8 @@ async function main() {
           // No more matches, show empty
           input.value = "";
         }
-      } else {
+      } else if (input.value) {
+        // Normal next mode
         const next = history.next();
         input.value = next;
       }

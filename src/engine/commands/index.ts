@@ -9,6 +9,7 @@ import { ClearCommand } from "./clear.js";
 import { RevertCommand } from "./revert.js";
 import { ModelCommand } from "./model.js";
 import { ThemeCommand } from "./theme.js";
+import { CenteredModeCommand } from "./centered.js";
 import { helpCommand } from "./help.js";
 import { aboutCommand } from "./about.js";
 
@@ -17,6 +18,7 @@ export { clearCommand } from "./clear.js";
 export { revertCommand } from "./revert.js";
 export { modelCommand } from "./model.js";
 export { themeCommand } from "./theme.js";
+export { centeredModeCommand } from "./centered.js";
 export { helpCommand } from "./help.js";
 export { aboutCommand } from "./about.js";
 
@@ -79,6 +81,9 @@ export class CommandRegistry {
     }
     if (this.placeholders.maxTokens !== undefined) {
       result = result.replace(/{maxTokens}/g, this.placeholders.maxTokens.toString());
+    }
+    if (this.placeholders.centered) {
+      result = result.replace(/{centered}/g, this.placeholders.centered);
     }
     return result;
   }
@@ -200,6 +205,7 @@ export function createCommandRegistry(
     onClearChat?: () => void;
     onRevert?: () => void;
     onShowModel?: () => void;
+    onToggleCentered?: (centered: boolean) => void;
   } = {}
 ): CommandRegistry {
   const registry = new CommandRegistry();
@@ -218,6 +224,13 @@ export function createCommandRegistry(
   registry.register(new ThemeCommand(ui, (newTheme: string) => {
     // Update theme placeholder after theme change
     registry.setPlaceholders({ theme: newTheme });
+  }));
+  registry.register(new CenteredModeCommand((centered: boolean) => {
+    // Update centered placeholder and notify UI
+    registry.setPlaceholders({ centered: centered ? "ON" : "OFF" });
+    if (options.onToggleCentered) {
+      options.onToggleCentered(centered);
+    }
   }));
   registry.register(helpCommand);
   registry.register(aboutCommand);

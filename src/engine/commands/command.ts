@@ -6,6 +6,7 @@ export interface CommandPlaceholders {
   theme?: string;
   temperature?: number;
   maxTokens?: number;
+  centered?: string;
 }
 
 /**

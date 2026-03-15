@@ -242,17 +242,36 @@ async function main() {
       notifications.show({ message: `Model: ${config.model}` });
     };
 
+    // Handle centered mode toggle - update UI objects
+    const handleToggleCentered = (centered: boolean) => {
+      const newWidth: number | "100%" = centered ? getCenteredWidth() : "100%";
+      
+      // Update scrollBox maxWidth
+      scrollBox.maxWidth = newWidth;
+      
+      // Update inputContainer maxWidth
+      inputContainer.maxWidth = newWidth;
+      
+      // Update contentContainer alignItems
+      contentContainer.alignItems = centered ? "center" : "stretch";
+      
+      // Request render to update the UI
+      renderer.requestRender?.();
+    };
+
     // Pass UI implementation to registry (ThemeCommand will use it)
     const registry = createCommandRegistry(renderer, tuiUI, {
       onClearChat: handleClearChat,
       onRevert: handleRevert,
       onShowModel: handleShowModel,
+      onToggleCentered: handleToggleCentered,
     });
 
     // Set placeholders for command titles
     (registry as CommandRegistry).setPlaceholders({
       theme: getThemeFromConfig(),
       model: config.model,
+      centered: isCentered() ? "ON" : "OFF",
     });
 
     commandModal = createPromptModal(renderer, {
@@ -309,8 +328,8 @@ async function main() {
 
   // AGENT: History container - holds all chat messages in a column layout
   // In centered mode, limit width for better readability
-  const centeredMode = isCentered();
-  const centeredWidth = centeredMode ? getCenteredWidth() : "100%";
+  const isCenteredMode = isCentered();
+  const centeredWidth: number | "100%" = isCenteredMode ? getCenteredWidth() : "100%";
   const historyContainer = new BoxRenderable(renderer, {
     width: "100%",
     height: "auto",
@@ -689,7 +708,7 @@ async function main() {
     flexDirection: "column",
     padding: 1,
     gap: 1,
-    alignItems: centeredMode ? "center" : "stretch",
+    alignItems: isCenteredMode ? "center" : "stretch",
   });
 
   // Add all children to content container in order: figlet -> title -> scroll/history -> input

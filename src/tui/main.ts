@@ -518,12 +518,13 @@ async function main() {
         }
         // If nothing started yet, just silently cancel
       } else {
-        // Real error - show it
-        const errorMsg = createErrorMessage(
-          renderer,
-          `Error: ${error instanceof Error ? error.message : "Failed to connect to Ollama. Make sure it's running on localhost:11434"}`,
-        );
-        historyContainer.add(errorMsg);
+        // Real error - show it (but filter out timeout errors)
+        const errorMessage = error instanceof Error ? error.message : "Failed to connect to Ollama. Make sure it's running on localhost:11434";
+        // Don't show timeout errors in chat
+        if (!errorMessage.includes("timed out") && !errorMessage.includes("timeout")) {
+          const errorMsg = createErrorMessage(renderer, `Error: ${errorMessage}`);
+          historyContainer.add(errorMsg);
+        }
       }
     } finally {
       isGenerating = false;

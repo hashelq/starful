@@ -53,8 +53,9 @@ export class CodeBlock {
     const headerBar = this._createHeaderBar();
 
     // Create markdown renderables for expanded and folded views
-    this._expandedMarkdown = this._createMarkdown("auto");
-    this._foldedMarkdown = this._createMarkdown(8);
+    // Both need streaming: true to update during code streaming
+    this._expandedMarkdown = this._createMarkdown("auto", true);
+    this._foldedMarkdown = this._createMarkdown(8, true);
 
     // Create FoldableBox with both states
     this._fold = new FoldableBox(renderer, {
@@ -155,13 +156,13 @@ export class CodeBlock {
   /**
    * Create a markdown renderable with consistent options
    */
-  private _createMarkdown(height: number | "auto"): MarkdownRenderable {
+  private _createMarkdown(height: number | "auto", streaming: boolean = false): MarkdownRenderable {
     return new MarkdownRenderable(this._renderer, {
       width: "100%",
       height: height,
       content: "",
       syntaxStyle: getDefaultSyntaxStyle(),
-      streaming: false,
+      streaming: streaming,
       conceal: true,
       treeSitterClient: this._treeSitterClient,
     });

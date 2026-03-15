@@ -52,7 +52,7 @@ export class SideBar {
       width: "100%",
       height: "auto",
       flexDirection: "column",
-      gap: 0,
+      gap: 0
     });
 
     this._scrollBox.add(this._sectionsContainer);
@@ -104,7 +104,6 @@ export class SideBar {
   private _updateSelection(): void {
     for (const cat of this._categories) {
       for (const button of cat.buttons) {
-        const btnId = button.renderable.id;
         button.setSelected(false);
       }
     }

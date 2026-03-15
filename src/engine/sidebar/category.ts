@@ -1,6 +1,6 @@
 import { BoxRenderable, CliRenderer, TextRenderable, createTextAttributes } from "@opentui/core";
 import { COLORS } from "../colors.js";
-import type { SidebarCategoryDef, SidebarCategoryId } from "./types.js";
+import type { SidebarCategoryDef } from "./types.js";
 import { SidebarButton } from "./button.js";
 
 /**
@@ -73,7 +73,7 @@ export class SidebarCategory {
       height: "auto",
       flexDirection: "column",
       gap: 0,
-      paddingY: 1,
+      padding: 1,
     });
 
     // Create buttons

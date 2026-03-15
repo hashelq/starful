@@ -85,7 +85,7 @@ export class ModelCommand extends Command {
         for (const [prov, modelList] of configuredByProvider) {
           items.push(`  ${prov}`);
           for (const m of modelList) {
-            items.push(m);
+            items.push(`    ${m}`);
           }
         }
       }
@@ -96,7 +96,7 @@ export class ModelCommand extends Command {
         for (const [prov, modelList] of inferredByProvider) {
           items.push(`  ${prov}`);
           for (const m of modelList) {
-            items.push(m);
+            items.push(`    ${m}`);
           }
         }
       }
@@ -107,7 +107,7 @@ export class ModelCommand extends Command {
         items,
         current: currentModel,
       }).then((selected) => {
-        // Skip category headers (items starting with "Configured" or "Inferred" or indented like "  provider")
+        // Skip category headers (items starting with "Configured", "Inferred", or "  provider")
         if (selected && !selected.startsWith("Configured") && !selected.startsWith("Inferred") && !selected.startsWith("  ")) {
           setDefaultModel(provider, selected);
           const newModel = `${provider}/${selected}`;

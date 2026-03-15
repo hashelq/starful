@@ -93,8 +93,11 @@ async function main() {
             notifications.show({ message: "Stream cancelled", type: "info" });
             return true; // Stop propagation
           }
-          // If not generating, let it propagate (will exit)
-          return false;
+          // If not generating and input is empty, exit
+          if (!input.value.trim()) {
+            return false; // Let it propagate to exit
+          }
+          return true; // Otherwise consume the Ctrl+C
         }
         
         // Check for Ctrl+P
@@ -103,13 +106,13 @@ async function main() {
           return true; // Stop propagation
         }
         
-         // Global keyboard handler: only focus chat input if no modal is open
-        // This allows modals to capture keyboard events when visible
-        if (TUIState.currentInputFocused) {
-          TUIState.currentInputFocused.focus();
-        } else {
-          input.focus();
+        // Check for Enter key on empty input - don't exit, just ignore
+        if (key && key.name === "enter" && !input.value.trim()) {
+          return true; // Consume the event, don't exit
         }
+        
+        // Let other keys pass through to the input - don't call focus() here
+        // as it interferes with normal typing
         return false;
       },
     ],

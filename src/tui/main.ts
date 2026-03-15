@@ -333,7 +333,7 @@ async function main() {
   const figletBanner = new ASCIIFontRenderable(renderer, {
     text: "STARFUL",
     font: "block",
-    color: COLORS.assistantText,
+    color: COLORS.dimText,
   });
 
   // AGENT: Title banner - added to history so it scrolls with chat
@@ -351,7 +351,7 @@ async function main() {
 
   // AGENT: ScrollBox wraps history container - enables vertical scrolling for long chats
   const scrollBox = new ScrollBoxRenderable(renderer, {
-    width: centeredWidth,
+    maxWidth: centeredWidth,
     flexGrow: 1,
     scrollY: true,
     stickyScroll: true,
@@ -361,7 +361,8 @@ async function main() {
 
   // AGENT: Input container - box with border wrapping the text input
   const inputContainer = new BoxRenderable(renderer, {
-    width: centeredWidth,
+    width: "100%",
+    maxWidth: centeredWidth,
     paddingX: 2,
     height: 1
   });
@@ -721,7 +722,7 @@ async function main() {
       colorKey: "placeholderText",
     },
     // Figlet banner
-    { renderable: figletBanner, prop: "color", colorKey: "assistantText" },
+    { renderable: figletBanner, prop: "color", colorKey: "dimText" },
     // Title text
     { renderable: titleText, prop: "fg", colorKey: "dimText" },
     // History container (if has background)

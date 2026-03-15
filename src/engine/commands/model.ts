@@ -81,9 +81,9 @@ export class ModelCommand extends Command {
       
       // Configured section
       if (configuredByProvider.size > 0) {
-        items.push("⚙ Configured");
+        items.push("Configured");
         for (const [prov, modelList] of configuredByProvider) {
-          items.push(`⚙   ${prov}`);
+          items.push(`  ${prov}`);
           for (const m of modelList) {
             items.push(m);
           }
@@ -92,9 +92,9 @@ export class ModelCommand extends Command {
       
       // Inferred section
       if (inferredByProvider.size > 0) {
-        items.push("🔮 Inferred");
+        items.push("Inferred");
         for (const [prov, modelList] of inferredByProvider) {
-          items.push(`🔮   ${prov}`);
+          items.push(`  ${prov}`);
           for (const m of modelList) {
             items.push(m);
           }
@@ -107,8 +107,8 @@ export class ModelCommand extends Command {
         items,
         current: currentModel,
       }).then((selected) => {
-        // Skip category headers (items starting with emoji or with emoji prefix followed by only spaces)
-        if (selected && !/^[⚙🔮]/.test(selected) && !/^[⚙🔮]\s+$/.test(selected)) {
+        // Skip category headers (items starting with "Configured" or "Inferred" or indented like "  provider")
+        if (selected && !selected.startsWith("Configured") && !selected.startsWith("Inferred") && !selected.startsWith("  ")) {
           setDefaultModel(provider, selected);
           const newModel = `${provider}/${selected}`;
           this._ui.showNotification?.(`Model: ${selected}`);

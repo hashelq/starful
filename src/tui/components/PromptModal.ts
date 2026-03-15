@@ -465,39 +465,37 @@ export class PromptModal {
   private _buildSelectItems(): void {
     if (this._mode.type !== "select") return;
 
-    // For select mode, treat items starting with emoji as category headers
-    // Support 2 levels:
-    // - Top category: "⚙ Configured" or "🔮 Inferred"  
-    // - Subcategory: "⚙   ollama" or "🔮   ollama" (with 3+ spaces after emoji)
+    // For select mode, detect categories by indentation:
+    // - Top category: no indentation (e.g., "Configured")
+    // - Subcategory: 2 spaces (e.g., "  ollama")  
+    // - Items: 4+ spaces (e.g., "    model-name")
     this._filteredItems = this._mode.items.map((item, index) => {
-      // Check for top category (emoji followed by space then text, no extra spaces)
-      const topCategoryMatch = item.match(/^([⚙🔮📁💡])\s+(\S.*)$/);
-      // Check for subcategory (emoji followed by 3+ spaces then text)
-      const subCategoryMatch = item.match(/^([⚙🔮📁💡])\s{3,}(\S.*)$/);
+      // Check indentation level
+      const leadingSpaces = item.match(/^(\s*)/)?.[1].length || 0;
       
-      if (subCategoryMatch) {
-        // Subcategory - less prominent
+      if (leadingSpaces === 0) {
+        // Top category - no indentation
         return {
           type: "category" as const,
-          title: `    ${subCategoryMatch[2]}`,
+          title: item,
           index,
         };
-      } else if (topCategoryMatch) {
-        // Top category - prominent
+      } else if (leadingSpaces === 2) {
+        // Subcategory - 2 spaces
         return {
           type: "category" as const,
-          title: `  ${topCategoryMatch[2]}`,
+          title: item,
+          index,
+        };
+      } else {
+        // Regular item - 4+ spaces
+        return {
+          type: "item" as const,
+          id: item.trim(),
+          label: item,
           index,
         };
       }
-      
-      // Regular item
-      return {
-        type: "item" as const,
-        id: item,
-        label: `      ${item}`,
-        index,
-      };
     });
   }
 

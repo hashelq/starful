@@ -226,11 +226,21 @@ async function main() {
     gap: 1,
   });
 
+  // AGENT: Banner container - centers the brand and subtitle
+  const bannerContainer = new BoxRenderable(renderer, {
+    width: "100%",
+    height: "auto",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 0,
+  });
+
   // AGENT: Figlet ASCII art banner - added to history so it scrolls with chat
   const figletBanner = new ASCIIFontRenderable(renderer, {
     text: "STARFUL",
     font: "block",
-      color: COLORS.assistantText,
+    color: COLORS.assistantText,
   });
 
   // AGENT: Title banner - added to history so it scrolls with chat
@@ -239,9 +249,12 @@ async function main() {
     fg: COLORS.dimText,
   });
 
+  // Add to banner container (centered)
+  bannerContainer.add(figletBanner);
+  bannerContainer.add(titleText);
+
   // Add to history container so they scroll with messages
-  historyContainer.add(figletBanner);
-  historyContainer.add(titleText);
+  historyContainer.add(bannerContainer);
 
   // AGENT: ScrollBox wraps history container - enables vertical scrolling for long chats
   const scrollBox = new ScrollBoxRenderable(renderer, {

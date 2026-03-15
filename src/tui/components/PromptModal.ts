@@ -312,7 +312,11 @@ export class PromptModal {
       }
     }
 
-    this._selectedIndex = 0;
+    // Find first selectable item (not a category)
+    const firstItemIndex = this._filteredItems.findIndex(
+      (item) => item.type === "item"
+    );
+    this._selectedIndex = firstItemIndex >= 0 ? firstItemIndex : 0;
     this._renderItems();
     this._updateSelection();
   }

@@ -2,15 +2,47 @@ import fs from "node:fs";
 import path from "node:path";
 
 /**
+ * Provider configuration types
+ */
+export interface OllamaProviderConfig {
+  type: "ollama";
+  host: string;
+  port: number;
+  timeout: number;
+}
+
+export interface ModelConfig {
+  name: string;
+}
+
+export type ProviderConfig = OllamaProviderConfig;
+
+export interface ModelsConfig {
+  [provider: string]: ModelConfig;
+}
+
+export interface ProvidersConfig {
+  [provider: string]: ProviderConfig;
+}
+
+/**
  * Default configuration values
  */
 export const DEFAULT_CONFIG = {
-  ollama: {
-    host: "localhost",
-    port: 11434,
-    timeout: 120000,
+  providers: {
+    ollama: {
+      type: "ollama" as const,
+      host: "localhost",
+      port: 11434,
+      timeout: 120000,
+    },
   },
-  model: "qwen3.5:35b-better",
+  models: {
+    ollama: {
+      name: "qwen3.5:35b-better",
+    },
+  },
+  defaultModel: "ollama/qwen3.5:35b-better",
 };
 
 /**
@@ -92,6 +124,71 @@ function mergeConfig(defaults: Config, loaded: Partial<Config>): Config {
   }
   
   return result;
+}
+
+/**
+ * Get default model in "provider/model" format
+ */
+export function getDefaultModel(): string {
+  const config = loadConfig();
+  return config.defaultModel;
+}
+
+/**
+ * Parse default model to get provider and model name
+ * Returns { provider: "ollama", model: "qwen3.5:35b-better" }
+ */
+export function parseDefaultModel(): { provider: string; model: string } {
+  const defaultModel = getDefaultModel();
+  const [provider, ...modelParts] = defaultModel.split("/");
+  return {
+    provider: provider || "ollama",
+    model: modelParts.join("/") || "qwen3.5:35b-better",
+  };
+}
+
+/**
+ * Set default model in "provider/model" format
+ */
+export function setDefaultModel(provider: string, model: string): void {
+  const config = loadConfig();
+  config.defaultModel = `${provider}/${model}`;
+  
+  // Ensure provider exists
+  if (!(config.providers as ProvidersConfig)[provider]) {
+    (config.providers as ProvidersConfig)[provider] = {
+      type: "ollama",
+      host: "localhost",
+      port: 11434,
+      timeout: 120000,
+    };
+  }
+  
+  // Ensure model exists for provider
+  const models = config.models as ModelsConfig;
+  if (!models[provider]) {
+    models[provider] = { name: model };
+  } else {
+    models[provider].name = model;
+  }
+  
+  saveConfig(config);
+}
+
+/**
+ * Get provider config by name
+ */
+export function getProviderConfig(provider: string): ProviderConfig | undefined {
+  const config = loadConfig();
+  return (config.providers as ProvidersConfig)[provider];
+}
+
+/**
+ * Get model config by provider name
+ */
+export function getModelConfig(provider: string): ModelConfig | undefined {
+  const config = loadConfig();
+  return (config.models as ModelsConfig)[provider];
 }
 
 /**

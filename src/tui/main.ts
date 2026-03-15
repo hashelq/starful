@@ -37,7 +37,7 @@ import { COLORS, initColors, getDefaultSyntaxStyle } from "../engine/colors.js";
 import { getTheme as getThemeFromConfig, isCentered, getCenteredWidth } from "../engine/ui-config.js";
 import { subscribeToThemeChanges } from "../engine/theme.js";
 import { TUIState } from "./state.js";
-import { loadConfig } from "../engine/config.js";
+import { loadConfig, parseDefaultModel, getProviderConfig } from "../engine/config.js";
 import { MockOllamaClient } from "../engine/llm/implementations/mock-ollama-client.js";
 
 // ============================================================================
@@ -115,10 +115,13 @@ async function main() {
   initColors();
 
   // AGENT: Initialize Ollama client with config
+  const { provider, model } = parseDefaultModel();
+  const providerConfig = getProviderConfig(provider);
+  
   const ollama = new OllamaClient({
-    host: config.ollama.host,
-    port: config.ollama.port,
-    timeout: config.ollama.timeout,
+    host: providerConfig?.host ?? "localhost",
+    port: providerConfig?.port ?? 11434,
+    timeout: providerConfig?.timeout ?? 120000,
   });
 
   // Create CLI renderer with keyboard shortcuts
@@ -239,7 +242,7 @@ async function main() {
     };
 
     const handleShowModel = () => {
-      notifications.show({ message: `Model: ${config.model}` });
+      notifications.show({ message: `Model: ${model}` });
     };
 
     // Handle centered mode toggle - update UI objects
@@ -270,7 +273,7 @@ async function main() {
     // Set placeholders for command titles
     (registry as CommandRegistry).setPlaceholders({
       theme: getThemeFromConfig(),
-      model: config.model,
+      model: model,
       centered: isCentered() ? "ON" : "OFF",
     });
 
@@ -457,7 +460,7 @@ Start by asking me something!`;
       currentAbortController = new AbortController();
 
       const chatStream = await ollama.chat(
-        config.model,
+        model,
         messagesForOllama,
         undefined,
         currentAbortController.signal,

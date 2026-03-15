@@ -25,10 +25,9 @@ class PaneButton {
     // Button container
     this._button = new BoxRenderable(renderer, {
       width: "100%",
-      height: 3,
+      height: 2,
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "center",
       gap: 1,
       paddingX: 1,
       paddingY: 0,
@@ -132,7 +131,7 @@ class PaneSection {
 /**
  * LeftPane - A sophisticated sidebar pane with multiple sections and interactive buttons
  */
-export class LeftPane {
+export class SideBar {
   private _pane: BoxRenderable;
   private _scrollBox: ScrollBoxRenderable;
   private _sectionsContainer: BoxRenderable;

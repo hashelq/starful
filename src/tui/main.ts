@@ -18,7 +18,7 @@ import { getTextInRange } from "./utils/text-buffer.js";
 import { createMarkdownRenderable, getFormattedResponse, createThinkingElement, findCodeBlockDelimiter, createErrorMessage } from "./utils/chat-helpers.js";
 import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
 import { createPromptModal, type PromptModal } from "./components/PromptModal.js";
-import { LeftPane } from "./components/LeftPane.js";
+import { SideBar } from "./components/SideBar.js";
 import { createCommandRegistry, type CommandRegistry } from "../engine/commands/index.js";
 import { COLORS, initColors } from "../engine/colors.js";
 import { getTheme as getThemeFromConfig } from "../engine/ui-config.js";
@@ -527,7 +527,7 @@ async function main() {
   });
 
   // Left pane - hides on narrow terminals, with navigation callback
-  const leftPane = new LeftPane(renderer, { 
+  const sideBar = new SideBar(renderer, { 
     width: 30, 
     threshold: 120,
     onNavigate: (section: string) => {
@@ -549,7 +549,7 @@ async function main() {
   contentContainer.add(inputContainer);
 
   // Add left pane and content to main container
-  mainContainer.add(leftPane.renderable);
+  mainContainer.add(sideBar.renderable);
   mainContainer.add(contentContainer);
 
   // AGENT: Mount main container to renderer's root (root is readonly, use .add())

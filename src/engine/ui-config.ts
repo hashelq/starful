@@ -50,7 +50,11 @@ export function loadUIConfig(): UIConfig {
     if (fs.existsSync(configPath)) {
       const data = fs.readFileSync(configPath, "utf-8");
       const loaded = JSON.parse(data);
-      return { ...DEFAULT_UI_CONFIG, ...loaded };
+      const config = { ...DEFAULT_UI_CONFIG, ...loaded };
+      
+      // Save to ensure all defaults are present
+      saveUIConfig(config);
+      return config;
     }
   } catch (error) {
     console.warn("Failed to load UI config, using defaults:", error);
@@ -105,7 +109,7 @@ export function isCentered(): boolean {
  */
 export function getCenteredWidth(): number {
   const config = loadUIConfig();
-  return config.centeredWidth ?? 90;
+  return config.centeredWidth ?? 128;
 }
 
 /**

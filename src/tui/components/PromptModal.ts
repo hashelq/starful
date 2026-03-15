@@ -8,6 +8,7 @@ import {
   CliRenderer,
 } from "@opentui/core";
 import { COLORS } from "../../engine/colors.js";
+import { subscribeToThemeChanges } from "../../engine/theme.js";
 import type {
   ResolvedCommand,
   CommandRegistry,
@@ -202,6 +203,16 @@ export class PromptModal {
 
     // Set up search filtering
     this._setupSearchFiltering();
+
+    // Subscribe to theme changes for all modal colors
+    subscribeToThemeChanges([
+      { renderable: backgroundLayer, prop: 'backgroundColor', colorKey: 'background' },
+      { renderable: shadowBox, prop: 'backgroundColor', colorKey: 'background' },
+      { renderable: this._modalBox, prop: 'backgroundColor', colorKey: 'background' },
+      { renderable: this._searchInput, prop: 'textColor', colorKey: 'textInput' },
+      { renderable: this._searchInput, prop: 'placeholderColor', colorKey: 'textInput' },
+      { renderable: this._searchInput, prop: 'backgroundColor', colorKey: 'surface' },
+    ]);
 
     // Initially hidden
     this._overlay.visible = false;

@@ -11,8 +11,7 @@ import {
   parseKeypress,
   createTextAttributes,
 } from "@opentui/core";
-// AGENT: Mock Ollama client for testing (replace with real OllamaClient for production)
-import { MockOllamaClient } from "../llm/implementations/mock-ollama-client.js";
+import { OllamaClient } from "../llm/implementations/ollama-client.js";
 import { CodeBlock } from "./components/CodeBlock.js";
 import { getTextInRange } from "./utils/text-buffer.js";
 import { createMarkdownRenderable, getFormattedResponse, createThinkingElement, findCodeBlockDelimiter, createErrorMessage } from "./utils/chat-helpers.js";
@@ -67,8 +66,8 @@ async function main() {
   // AGENT: Initialize colors based on theme config
   initColors();
 
-  // AGENT: Mock Ollama client instance for testing
-  const ollama = new MockOllamaClient({
+  // AGENT: Initialize Ollama client with config
+  const ollama = new OllamaClient({
     host: config.ollama.host,
     port: config.ollama.port,
     timeout: config.ollama.timeout,

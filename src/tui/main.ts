@@ -59,6 +59,38 @@ interface Message {
 // Main Application
 // ============================================================================
 
+// Recursively get selected text from renderable and its children
+function getSelectedTextRecursive(renderable: any): string {
+  if (!renderable) return "";
+  
+  // If this renderable has getSelectedText, try to use it
+  if (typeof renderable.getSelectedText === 'function') {
+    const text = renderable.getSelectedText();
+    if (text && text.trim()) {
+      return text;
+    }
+  }
+  
+  // Otherwise, try to get children and recurse
+  if (typeof renderable.getChildren === 'function') {
+    const children = renderable.getChildren();
+    if (children && children.length > 0) {
+      const texts: string[] = [];
+      for (const child of children) {
+        const childText = getSelectedTextRecursive(child);
+        if (childText.trim()) {
+          texts.push(childText);
+        }
+      }
+      if (texts.length > 0) {
+        return texts.join("\n");
+      }
+    }
+  }
+  
+  return "";
+}
+
 async function main() {
   // AGENT: Initialize Tree-sitter for syntax highlighting in code blocks
   const treeSitterClient = new TreeSitterClient({
@@ -231,27 +263,41 @@ async function main() {
     });
   }
 
-  // Implement copy selection using OpenTUI's built-in selection event
+  // Implement copy selection - try mouse events with debugging
   {
-    // Listen to selection event from renderer
-    renderer.on("selection", (selection) => {
-      if (!selection) return;
+    let selectionStart = { x: -1, y: -1 };
+    
+    renderer.root.onMouseDown = (event) => {
+      selectionStart.x = event.x;
+      selectionStart.y = event.y;
+    };
+
+    renderer.root.onMouseUp = (event) => {
+      // Check if there was actual mouse movement (selection)
+      const hasMoved = selectionStart.x !== -1 && (
+        Math.abs(event.x - selectionStart.x) > 1 || 
+        Math.abs(event.y - selectionStart.y) > 1
+      );
       
-      const container = renderer.getSelectionContainer();
-      if (!container) return;
-      
-      // Check if the container has getSelectedText method
-      if ('getSelectedText' in container) {
-        const text = (container as any).getSelectedText();
-        if (text && text.trim()) {
-          renderer.copyToClipboardOSC52(text);
-          notifications.show({
-            message: "Copied!",
-          });
-        }
+      if (!hasMoved) {
+        selectionStart.x = -1;
+        return;
       }
-    });
+      
+      // Get selected text recursively from root and its children
+      const text = getSelectedTextRecursive(renderer.root);
+      
+      if (text && text.trim()) {
+        renderer.copyToClipboardOSC52(text);
+        notifications.show({ message: "Copied!", type: "info" });
+      }
+      
+      renderer.clearSelection();
+      selectionStart.x = -1;
+    };
   }
+
+  renderer.console.show();
 
   // AGENT: History container - holds all chat messages in a column layout
   const historyContainer = new BoxRenderable(renderer, {

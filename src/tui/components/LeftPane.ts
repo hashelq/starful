@@ -44,6 +44,18 @@ export class LeftPane {
       { renderable: this._pane, prop: 'backgroundColor', colorKey: 'surfaceAlt' },
     ]);
 
+    // Add STARFUL text vertically
+    const starfulText = new TextRenderable(renderer, {
+      content: "STARFUL",
+      fg: COLORS.primary,
+    });
+    this._pane.add(starfulText);
+
+    // Subscribe text color to theme changes
+    subscribeToThemeChanges([
+      { renderable: starfulText, prop: 'fg', colorKey: 'primary' },
+    ]);
+
     // Set initial visibility based on terminal width
     this._updateVisibility();
 

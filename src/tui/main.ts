@@ -528,7 +528,7 @@ async function main() {
   });
 
   // Left pane - hides on narrow terminals
-  const leftPane = new LeftPane(renderer, { width: 3, threshold: 70 });
+  const leftPane = new LeftPane(renderer, { width: 30, threshold: 70 });
 
   // Add all children to main container in order: figlet -> title -> scroll/history -> input
   // AGENT: Add scrollable area and input to main container

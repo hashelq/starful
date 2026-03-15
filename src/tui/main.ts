@@ -231,11 +231,10 @@ async function main() {
     });
   }
 
-  // Implement copy selection using OpenTUI's built-in selection
+  // Implement copy selection using OpenTUI's built-in selection event
   {
-    renderer.root.onMouseUp = () => {
-      // Use OpenTUI's built-in selection handling
-      const selection = renderer.getSelection();
+    // Listen to selection event from renderer
+    renderer.on("selection", (selection) => {
       if (!selection) return;
       
       const container = renderer.getSelectionContainer();
@@ -251,8 +250,7 @@ async function main() {
           });
         }
       }
-      renderer.clearSelection();
-    };
+    });
   }
 
   // AGENT: History container - holds all chat messages in a column layout

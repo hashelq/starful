@@ -35,7 +35,7 @@ class PaneButton {
       height: 1,
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "center",
+      justifyContent: "flex-start",
       paddingX: 1,
       paddingY: 0,
     });
@@ -111,8 +111,9 @@ class PaneSection {
       width: "100%",
       height: 1,
       flexDirection: "row",
-      justifyContent: "center",
+      justifyContent: "flex-start",
       alignItems: "center",
+      paddingX: 1,
       backgroundColor: COLORS.surfaceAlt, // lighter when folded
     });
 
@@ -151,6 +152,7 @@ class PaneSection {
       height: "auto",
       flexDirection: "column",
       gap: 0,
+      paddingY: 1,
     });
 
     // Add buttons

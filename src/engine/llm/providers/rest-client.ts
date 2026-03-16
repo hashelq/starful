@@ -101,6 +101,9 @@ export interface ListModelsResponse {
  * Base REST client for LLM providers
  */
 export abstract class RestLLMClient {
+  /** Unique identifier for this provider implementation */
+  name: string = "generic";
+
   protected baseUrl: string;
   protected headers: Record<string, string>;
   protected timeout: number;

@@ -90,6 +90,9 @@ export class OllamaError extends Error {
  * OllamaClient - extends RestLLMClient with Ollama-specific endpoints
  */
 export class OllamaClient extends RestLLMClient {
+  /** Unique provider identifier */
+  override name: string = "ollama";
+
   private config: Required<APIConfig>;
 
   constructor(config?: APIConfig) {

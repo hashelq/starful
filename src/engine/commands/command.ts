@@ -34,10 +34,10 @@ export const CommandCategories = {
  */
 export abstract class Command {
   /** Unique identifier for the command */
-  abstract readonly id: string;
+  abstract get id(): string;
   
   /** Display name of the command */
-  abstract readonly name: string;
+  abstract get name(): string;
   
   /** Description of what the command does */
   abstract readonly description: string;

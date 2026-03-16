@@ -64,7 +64,7 @@ export interface ExtendedProviderConfig {
  * Auto-discovers providers from registry
  */
 export function createLLMProvider(providerConfig: ProviderConfig, _model: string): LLMProvider {
-  const type = providerConfig.type;
+  const type = providerConfig.base;
   
   // Look up provider in registry
   const ProviderClass = providerRegistry.get(type);

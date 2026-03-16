@@ -1,7 +1,9 @@
 /**
- * OllamaClient - Implementation of Ollama API client with all official endpoints.
+ * OllamaClient - Implementation of Ollama API client extending RestLLMClient.
+ * Supports all Ollama-specific endpoints and parameters.
  */
 
+import { RestLLMClient, type ChatResponse, type CompletionResponse, type ListModelsResponse } from "./rest-client.js";
 import type {
   APIConfig,
   ShowModelInfo,
@@ -11,10 +13,63 @@ import type {
   GenerateImageResponse,
   ChatMessage,
   ModelTool,
-  ChatResponse,
   CreateModelParameters,
   LocalModelInfo,
 } from "../types/api-types.js";
+
+/**
+ * Ollama-specific options that get wrapped in "options" object
+ */
+export interface OllamaOptions {
+  num_gpu?: number;
+  num_thread?: number;
+  num_ctx?: number;
+  num_keep?: number;
+  temperature?: number;
+  top_p?: number;
+  top_k?: number;
+  min_p?: number;
+  repeat_penalty?: number;
+  frequency_penalty?: number;
+  presence_penalty?: number;
+  tfs_z?: number;
+  typical_p?: number;
+  stop?: string | string[];
+  seed?: number;
+}
+
+/**
+ * Full chat options extending base with Ollama-specific options
+ */
+export interface OllamaChatOptions {
+  model: string;
+  messages: ChatMessage[];
+  tools?: ModelTool[];
+  stream?: boolean;
+  signal?: AbortSignal;
+  // Ollama-specific options (will be wrapped in "options" object)
+  options?: OllamaOptions;
+  format?: "json" | undefined;
+  template?: string;
+  context?: number[];
+  raw?: boolean;
+}
+
+/**
+ * Completion options for /api/generate
+ */
+export interface OllamaCompletionOptions {
+  model: string;
+  prompt: string;
+  stream?: boolean;
+  signal?: AbortSignal;
+  options?: OllamaOptions;
+  format?: "json" | undefined;
+  template?: string;
+  context?: number[];
+  raw?: boolean;
+  keep_alive?: number | string;
+}
 
 /**
  * Custom error class for Ollama API errors.
@@ -32,100 +87,39 @@ export class OllamaError extends Error {
 }
 
 /**
- * Main OllamaClient class implementing the official Ollama API.
+ * OllamaClient - extends RestLLMClient with Ollama-specific endpoints
  */
-export class OllamaClient {
+export class OllamaClient extends RestLLMClient {
   private config: Required<APIConfig>;
 
   constructor(config?: APIConfig) {
+    const host = config?.host ?? "localhost";
+    const port = config?.port ?? 11434;
+    const baseUrl = `http://${host}:${port}`;
+    
+    super(baseUrl, {
+      timeout: config?.timeout ?? 60000,
+    });
+
     this.config = {
-      host: config?.host ?? "localhost",
-      port: config?.port ?? 11434,
+      host,
+      port,
       timeout: config?.timeout ?? 60000,
       basepath: config?.basepath ?? "",
       token: config?.token ?? null,
     };
   }
 
-  private async getResponse<T>(
-    endpoint: string,
-    body?: Record<string, unknown>,
-    streaming = false,
-    signal?: AbortSignal,
-  ): Promise<AsyncIterable<T> | T> {
-    const url = `http://${this.config.host}:${this.config.port}${this.config.basepath}${endpoint}`;
-
-    // Combine timeout signal with custom signal if provided
-    const timeoutSignal = AbortSignal.timeout(this.config.timeout);
-    const combinedSignal = signal 
-      ? AbortSignal.any([timeoutSignal, signal])
-      : timeoutSignal;
-
-    let response: Response;
-    try {
-      response = await fetch(url, {
-        method: "POST",
-        headers: this._headers(),
-        body: JSON.stringify(body),
-        signal: combinedSignal,
-      });
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      throw new OllamaError(
-        `Connection failed: ${errMsg}. Is Ollama running on ${this.config.host}:${this.config.port}?`,
-        0,
-        errMsg,
-      );
-    }
-
-    if (!response.ok) {
-      const text = await response.text();
-      throw new OllamaError(
-        `Ollama error ${response.status}: ${text}`,
-        response.status,
-        text,
-      );
-    }
-
-    if (streaming || body?.stream) {
-      return this._streamResponse<T>(response.body!);
-    }
-
-    return (await response.json()) as T;
-  }
-
-  private async *_streamResponse<T>(
-    stream: ReadableStream<Uint8Array>,
-  ): AsyncIterable<T> {
-    const reader = stream.getReader();
-    const decoder = new TextDecoder();
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-
-        for (const line of chunk.trim().split("\n")) {
-          try {
-            yield JSON.parse(line);
-          } catch {}
-        }
-      }
-    } finally {
-      reader.releaseLock();
-    }
+  /**
+   * Build URL with basepath
+   */
+  private buildOllamaUrl(endpoint: string): string {
+    return `${this.baseUrl}${this.config.basepath}${endpoint}`;
   }
 
   /**
-   * Generate a chat response with conversation history.
-   * Uses POST /api/chat endpoint.
-   * 
-   * @param model - The model name to use
-   * @param messages - Conversation history
-   * @param tools - Optional tools for function calling
-   * @param signal - Optional AbortSignal to cancel the stream
+   * Chat completion using /api/chat endpoint
+   * Wraps Ollama-specific options in "options" object
    */
   async chat(
     model: string,
@@ -143,24 +137,94 @@ export class OllamaClient {
       body.tools = tools;
     }
 
-    return (await this.getResponse(
-      "/api/chat",
-      body,
-      false,
-      signal,
-    )) as AsyncIterable<ChatResponse>;
+    return this.postStream<ChatResponse>("/api/chat", body, signal);
+  }
+
+  /**
+   * Chat with full Ollama options support
+   */
+  async chatWithOptions(
+    opts: OllamaChatOptions,
+  ): Promise<AsyncIterable<ChatResponse>> {
+    const body: Record<string, unknown> = {
+      model: opts.model,
+      messages: opts.messages,
+      stream: opts.stream ?? true,
+    };
+
+    if (opts.tools && Array.isArray(opts.tools)) {
+      body.tools = opts.tools;
+    }
+
+    // Wrap Ollama-specific options in "options" object
+    if (opts.options) {
+      body.options = { ...opts.options };
+    }
+
+    if (opts.format) body.format = opts.format;
+    if (opts.template) body.template = opts.template;
+    if (opts.context) body.context = opts.context;
+    if (opts.raw !== undefined) body.raw = opts.raw;
+
+    return this.postStream<ChatResponse>("/api/chat", body, opts.signal);
+  }
+
+  /**
+   * Text completion using /api/generate endpoint
+   */
+  async complete(
+    prompt: string,
+    signal?: AbortSignal,
+  ): Promise<AsyncIterable<CompletionResponse>> {
+    const body = {
+      model: "llama2", // Default model, should be configurable
+      prompt,
+      stream: true,
+    };
+
+    return this.postStream<CompletionResponse>("/api/generate", body, signal);
+  }
+
+  /**
+   * Completion with full Ollama options
+   */
+  async completeWithOptions(
+    opts: OllamaCompletionOptions,
+  ): Promise<AsyncIterable<CompletionResponse>> {
+    const body: Record<string, unknown> = {
+      model: opts.model,
+      prompt: opts.prompt,
+      stream: opts.stream ?? true,
+    };
+
+    // Wrap Ollama-specific options in "options" object
+    if (opts.options) {
+      body.options = { ...opts.options };
+    }
+
+    if (opts.format) body.format = opts.format;
+    if (opts.template) body.template = opts.template;
+    if (opts.context) body.context = opts.context;
+    if (opts.raw !== undefined) body.raw = opts.raw;
+    if (opts.keep_alive !== undefined) body.keep_alive = opts.keep_alive;
+
+    return this.postStream<CompletionResponse>("/api/generate", body, opts.signal);
   }
 
   /**
    * List all locally available models.
    * Uses GET /api/tags endpoint.
    */
-  async listModels(): Promise<LocalModelInfo> {
-    const url = `http://${this.config.host}:${this.config.port}${this.config.basepath}/api/tags`;
-    const res = await fetch(url, { headers: this._headers() });
+  async listModels(): Promise<ListModelsResponse> {
+    const url = this.buildOllamaUrl("/api/tags");
+    const response = await fetch(url, { headers: this.headers });
 
-    if (!res.ok) throw new OllamaError(`Failed to list models`, res.status);
-    return ((await res.json()) as { models: LocalModelInfo }).models;
+    if (!response.ok) {
+      throw new OllamaError(`Failed to list models: ${response.status}`, response.status);
+    }
+
+    const data = await response.json() as { models: LocalModelInfo[] };
+    return { models: data.models };
   }
 
   /**
@@ -168,7 +232,7 @@ export class OllamaClient {
    * Uses GET /api/show endpoint.
    */
   async showModel(model: string): Promise<ShowModelInfo> {
-    const result = (await this.getResponse<any>("/api/show", { name: model })) as unknown as ShowModelInfo;
+    const result = await this.post<ShowModelInfo>("/api/show", { name: model });
     return result;
   }
 
@@ -178,7 +242,7 @@ export class OllamaClient {
    */
   async pullModel(model: string, options?: { insecure?: boolean }) {
     const body = { name: model, ...options };
-    return this.getResponse("/api/pull", body);
+    return this.post("/api/pull", body);
   }
 
   /**
@@ -187,7 +251,7 @@ export class OllamaClient {
    */
   async pushModel(model: string, options?: { insecure?: boolean }) {
     const body = { name: model, ...options };
-    return this.getResponse("/api/push", body);
+    return this.post("/api/push", body);
   }
 
   /**
@@ -198,8 +262,8 @@ export class OllamaClient {
     source: string,
     destination: string,
   ): Promise<{ status: string }> {
-    const result = await this.getResponse<{ status: string }>("/api/copy", { source, destination });
-    return (Array.isArray(result) ? result[0] : result) as { status: string };
+    const result = await this.post<{ status: string }>("/api/copy", { source, destination });
+    return result;
   }
 
   /**
@@ -207,8 +271,8 @@ export class OllamaClient {
    * Uses DELETE /api/delete endpoint.
    */
   async deleteModel(model: string): Promise<{ status: string }> {
-    const result = await this.getResponse<{ status: string }>("/api/delete", { name: model });
-    return (Array.isArray(result) ? result[0] : result) as { status: string };
+    const result = await this.post<{ status: string }>("/api/delete", { name: model });
+    return result;
   }
 
   /**
@@ -219,20 +283,21 @@ export class OllamaClient {
     parameters: CreateModelParameters & { stream?: boolean },
     streamParam = false,
   ): Promise<void | AsyncIterable<void>> {
-    return this.getResponse("/api/create", parameters as unknown as Record<string, unknown>, streamParam);
+    return this.post("/api/create", parameters as unknown as Record<string, unknown>, streamParam ? undefined : undefined);
   }
 
   /**
    * Get information about running models.
    * Uses GET /api/ps endpoint.
    */
-  async getRunningModels() {
-    const url = `http://${this.config.host}:${this.config.port}${this.config.basepath}/api/ps`;
-    const res = await fetch(url, { headers: this._headers() });
+  async getRunningModels(): Promise<PsResponse> {
+    const url = this.buildOllamaUrl("/api/ps");
+    const res = await fetch(url, { headers: this.headers });
 
-    if (!res.ok)
+    if (!res.ok) {
       throw new OllamaError(`Failed to get running models`, res.status);
-    return (await res.json()) as unknown as PsResponse;
+    }
+    return (await res.json()) as PsResponse;
   }
 
   /**
@@ -243,7 +308,7 @@ export class OllamaClient {
     model: string,
     prompt: string,
   ): Promise<EmbeddingsResponse> {
-    const result = await this.getResponse("/api/embed", { model, prompt });
+    const result = await this.post("/api/embed", { model, prompt });
     return result as EmbeddingsResponse;
   }
 
@@ -255,15 +320,7 @@ export class OllamaClient {
     params: Omit<GenerateImageParameters, "model">,
   ): Promise<GenerateImageResponse> {
     const body = { ...params, model };
-    const result = await this.getResponse("/api/images", body);
-    return result as unknown as GenerateImageResponse;
-  }
-
-  private _headers() {
-    const headers: Record<string, string> = {};
-    if (this.config.token) {
-      headers["Authorization"] = `Bearer ${this.config.token}`;
-    }
-    return headers;
+    const result = await this.post("/api/images", body);
+    return result as GenerateImageResponse;
   }
 }

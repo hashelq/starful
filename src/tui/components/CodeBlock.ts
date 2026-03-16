@@ -10,6 +10,7 @@ import {
 import { FoldableBox } from "./FoldableBox.js";
 import { COLORS, getDefaultSyntaxStyle, getSyntaxStyle } from "../../engine/colors.js";
 import { subscribeToThemeChanges, themeService } from "../../engine/theme.js";
+import { copyToClipboard } from "../../engine/clipboard.js";
 
 /**
  * CodeBlock - A collapsible code block component with:
@@ -176,7 +177,7 @@ export class CodeBlock {
   /**
    * Copy code content to clipboard
    */
-  private _copyToClipboard(): void {
+  private async _copyToClipboard(): Promise<void> {
     const content = this._expandedMarkdown.content;
     if (!content) return;
 
@@ -185,7 +186,10 @@ export class CodeBlock {
     code = code.replace(/^```\w*\n?/, "");
     code = code.replace(/```$/, "");
 
-    this._renderer.copyToClipboardOSC52?.(code);
+    // Use fallback clipboard (checks OSC 52 support and falls back to system tools)
+    const isOsc52Supported = this._renderer.isOsc52Supported?.() ?? false;
+    await copyToClipboard(code, isOsc52Supported);
+    
     this._inputFocus();
 
     // Show "COPIED!" feedback

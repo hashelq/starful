@@ -40,6 +40,7 @@ import { subscribeToThemeChanges } from "../engine/theme.js";
 import { TUIState } from "./state.js";
 import { loadConfig, parseDefaultModel, getProviderConfig } from "../engine/config.js";
 import { MockOllamaClient } from "../engine/llm/implementations/mock-ollama-client.js";
+import { copyToClipboard } from "../engine/clipboard.js";
 
 // ============================================================================
 // Types
@@ -325,7 +326,7 @@ async function main() {
       selectionStart.y = event.y;
     };
 
-    renderer.root.onMouseUp = (event) => {
+    renderer.root.onMouseUp = async (event) => {
       // Check if there was actual mouse movement (selection)
       const hasMoved = selectionStart.x !== -1 && (
         Math.abs(event.x - selectionStart.x) > 1 || 
@@ -341,7 +342,8 @@ async function main() {
       const text = getSelectedTextRecursive(renderer.root);
       
       if (text && text.trim()) {
-        renderer.copyToClipboardOSC52(text);
+        const isOsc52Supported = renderer.isOsc52Supported?.() ?? false;
+        await copyToClipboard(text, isOsc52Supported);
         notifications.show({ message: "Copied!", type: "info" });
       }
       

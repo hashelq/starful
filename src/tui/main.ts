@@ -26,9 +26,9 @@ import {
   type PromptModal,
 } from "./components/PromptModal.js";
 import {
-  SideBar,
-  registerDefaultSidebarCategories,
-} from "./components/SideBar.js";
+  LeftSideBar,
+  registerDefaultLeftSidebarCategories,
+} from "./components/LeftSideBar.js";
 import { RightSideBar } from "./components/RightSideBar.js";
 import {
   createCommandRegistry,
@@ -658,6 +658,9 @@ Start by asking me something!`;
       minute: "2-digit",
     });
 
+    // Check if this is the last message
+    const isLastMessage = messages.length === 0;
+
     if (role === "user") {
       // User message: row with content on left, timestamp on right
       const messageRow = new BoxRenderable(renderer, {
@@ -665,12 +668,13 @@ Start by asking me something!`;
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "flex-start",
+        padding: 1,
       });
 
       const messageText = new TextRenderable(renderer, {
         content: "> " + content,
         fg: COLORS.userText,
-        attributes: createTextAttributes({ bold: true }),
+        attributes: createTextAttributes({ bold: isLastMessage }),
         flexGrow: 1,
       });
 
@@ -679,13 +683,13 @@ Start by asking me something!`;
       const hashText = new TextRenderable(renderer, {
         content: ` ${flowHash}`,
         fg: "#55aaff", // Blue color (color 4)
-        attributes: createTextAttributes({ bold: true }),
+        attributes: createTextAttributes({ bold: isLastMessage }),
       });
 
       const timestamp = new TextRenderable(renderer, {
         content: " " + time,
         fg: COLORS.dimText,
-        attributes: createTextAttributes({ bold: true }),
+        attributes: createTextAttributes({ bold: isLastMessage }),
       });
 
       // Subscribe message colors to theme changes
@@ -704,10 +708,16 @@ Start by asking me something!`;
       renderer.requestRender?.();
       return messageText;
     } else {
-      // Assistant message: simple text
+      // Assistant message: container with padding
+      const messageContainer = new BoxRenderable(renderer, {
+        width: "100%",
+        padding: 1,
+      });
+
       const messageText = new TextRenderable(renderer, {
         content: content,
         fg: COLORS.assistantText,
+        attributes: createTextAttributes({ bold: isLastMessage }),
       });
 
       // Subscribe message colors to theme changes
@@ -715,8 +725,12 @@ Start by asking me something!`;
         { renderable: messageText, prop: "fg", colorKey: "assistantText" },
       ]);
 
-      historyContainer.add(messageText);
+      messageContainer.add(messageText);
+      historyContainer.add(messageContainer);
       messages.push({ role, content, renderable: messageText });
+
+      // Update right sidebar history
+      rightSideBar.updateHistory(messages);
 
       renderer.requestRender?.();
 
@@ -761,10 +775,10 @@ Start by asking me something!`;
   });
 
   // Left pane - hides on narrow terminals, with navigation callback
-  // Register default sidebar categories first
-  registerDefaultSidebarCategories();
+  // Register default left sidebar categories first
+  registerDefaultLeftSidebarCategories();
 
-  const sideBar = new SideBar(renderer, {
+  const sideBar = new LeftSideBar(renderer, {
     width: 35,
     threshold: 80,
     onNavigate: (section: string) => {

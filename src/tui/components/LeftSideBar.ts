@@ -7,11 +7,11 @@ import { SidebarCategory as SidebarCategoryClass } from "./sidebar/category.js";
 import { StatusMatrix } from "./sidebar/status-matrix/index.js";
 
 /**
- * SideBar - Main sidebar component using the registry system
+ * LeftSideBar - Main sidebar component using the registry system
  * 
  * Supports plugins by registering categories through the registry
  */
-export class SideBar {
+export class LeftSideBar {
   private _pane: BoxRenderable;
   private _scrollBox: ScrollBoxRenderable;
   private _sectionsContainer: BoxRenderable;
@@ -163,9 +163,9 @@ export class SideBar {
 
 /**
  * Helper to register default categories
- * Call this at app startup to set up default sidebar
+ * Call this at app startup to set up default left sidebar
  */
-export function registerDefaultSidebarCategories(): void {
+export function registerDefaultLeftSidebarCategories(): void {
   const registry = getSidebarRegistry();
   
   // Load folded sections from config

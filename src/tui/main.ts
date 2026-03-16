@@ -136,26 +136,20 @@ async function main() {
         // Parse key with Kitty keyboard protocol support
         const key = parseKeypress(sequence, { useKittyKeyboard: true });
 
-        // Check for Ctrl+C - cancel ongoing stream
-        if (key && key.ctrl && key.name === "c") {
+        // Check for Ctrl+C or Escape - cancel ongoing stream
+        if (key && ((key.ctrl && key.name === "c") || key.name === "escape")) {
           if (appState.isGenerating && currentAbortController) {
             currentAbortController.abort();
             notifications.show({ message: "Stream cancelled", type: "info" });
             return true; // Stop propagation
           }
-          // If not generating and input is empty, exit
-          if (!promptInput.input.value.trim()) {
+          // For Ctrl+C only: If not generating and input is empty, exit
+          if (key.ctrl && key.name === "c" && !promptInput.input.value.trim()) {
             return false; // Let it propagate to exit
           }
-          return true; // Consume to prevent exit when input has content
-        }
-        
-        // Check for Escape - cancel ongoing stream
-        if (key && key.name === "escape") {
-          if (appState.isGenerating && currentAbortController) {
-            currentAbortController.abort();
-            notifications.show({ message: "Stream cancelled", type: "info" });
-            return true; // Stop propagation
+          // Consume to prevent exit when input has content
+          if (key.ctrl && key.name === "c") {
+            return true;
           }
         }
         

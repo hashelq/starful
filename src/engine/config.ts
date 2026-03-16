@@ -70,23 +70,23 @@ export interface ModelEntry {
 export type ModelsConfig = Record<ModelName, ModelEntry>;
 
 /**
- * Full configuration interface
+ * Full configuration interface (raw data)
  */
-export interface Config {
+export interface ConfigData {
   providers: ProviderConfig[];
   models: ModelsConfig;
   defaultModel: ProviderModelName;
 }
 
 /**
- * Config class - type-safe access to configuration
+ * Config - type-safe access to configuration
  * Parses default model once and remembers it
  */
-export class ConfigClass {
-  private data: Config;
+export class Config {
+  private data: ConfigData;
   private _parsedDefaultModel: ({ id: ProviderModelName } & ModelEntry) | undefined;
 
-  constructor(data: Config) {
+  constructor(data: ConfigData) {
     this.data = data;
     // Parse default model once
     this._parsedDefaultModel = this._parseDefaultModel();
@@ -163,7 +163,7 @@ export class ConfigClass {
   /**
    * Get the raw config data (for serialization)
    */
-  toJSON(): Config {
+  toJSON(): ConfigData {
     return this.data;
   }
 }
@@ -171,7 +171,7 @@ export class ConfigClass {
 /**
  * Default configuration values
  */
-export const DEFAULT_CONFIG: Config = {
+export const DEFAULT_CONFIG: ConfigData = {
   providers: [
     {
       type: "ollama",
@@ -215,9 +215,9 @@ function ensureConfigDir(): void {
 
 /**
  * Load configuration from file or return defaults
- * Returns ConfigClass for type-safe access
+ * Returns Config for type-safe access
  */
-export function loadConfig(): ConfigClass {
+export function loadConfig(): Config {
   const configPath = getConfigPath();
   
   try {
@@ -228,7 +228,7 @@ export function loadConfig(): ConfigClass {
       
       // Save to ensure all defaults are present
       saveConfig(config);
-      return new ConfigClass(config);
+      return new Config(config);
     }
   } catch (error) {
     console.warn("Failed to load config, using defaults:", error);
@@ -236,17 +236,17 @@ export function loadConfig(): ConfigClass {
   
   // First run - save default config
   saveConfig(DEFAULT_CONFIG);
-  return new ConfigClass({ ...DEFAULT_CONFIG });
+  return new Config({ ...DEFAULT_CONFIG });
 }
 
 /**
  * Save configuration to file
  */
-export function saveConfig(config: Config | ConfigClass): void {
+export function saveConfig(config: ConfigData | Config): void {
   const configPath = getConfigPath();
   ensureConfigDir();
   
-  const data = config instanceof ConfigClass ? config.toJSON() : config;
+  const data = config instanceof Config ? config.toJSON() : config;
   
   try {
     fs.writeFileSync(configPath, JSON.stringify(data, null, 2), "utf-8");
@@ -258,7 +258,7 @@ export function saveConfig(config: Config | ConfigClass): void {
 /**
  * Deep merge two configs (defaults + loaded)
  */
-function mergeConfig(defaults: Config, loaded: Partial<Config>): Config {
+function mergeConfig(defaults: ConfigData, loaded: Partial<ConfigData>): ConfigData {
   const result: any = { ...defaults };
   
   for (const key in loaded) {
@@ -359,7 +359,7 @@ export function getConfig(key?: string, subKey?: string): any {
 /**
  * Update config value
  */
-export function updateConfig(updates: Partial<Config>): Config {
+export function updateConfig(updates: Partial<ConfigData>): ConfigData {
   const current = loadConfig();
   const currentData = current.toJSON();
   const merged = mergeConfig(currentData, updates);

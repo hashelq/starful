@@ -121,6 +121,32 @@ export class RightSideBar {
     this._renderer.requestRender?.();
   }
 
+  /**
+   * Add a single prompt to the history display (no wrap, shows first line only)
+   */
+  addPrompt(promptContent: string): void {
+    // Get first line only (no wrap)
+    const firstLine = promptContent.split("\n")[0];
+    const displayContent = "> " + firstLine;
+    
+    const msgText = new TextRenderable(this._renderer, {
+      content: displayContent,
+      fg: COLORS.userText,
+      padding: 1,
+      width: "100%",
+    });
+
+    subscribeToThemeChanges([
+      { renderable: msgText, prop: "fg", colorKey: "userText" },
+    ]);
+
+    // Add at the top (newest first)
+    this._contentContainer.add(msgText, 0);
+    this._messageItems.push(msgText);
+
+    this._renderer.requestRender?.();
+  }
+
   private _updateVisibility(): void {
     const terminalWidth = (this._renderer as any).terminalWidth || 80;
     this._pane.visible = terminalWidth >= this._threshold;

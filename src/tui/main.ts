@@ -746,6 +746,9 @@ Start by asking me something!`;
       // Add user message to history
       addStaticMessage("user", ` ${value}`);
 
+      // Add to right sidebar prompt list
+      rightSideBar.addPrompt(value);
+
       // Build conversation history from existing messages
       const conversationHistory: Array<{
         role: "user" | "assistant";

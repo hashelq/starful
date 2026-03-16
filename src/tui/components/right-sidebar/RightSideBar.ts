@@ -23,6 +23,7 @@ export class RightSideBar {
   private _width: number;
   private _threshold: number;
   private _messageItems: TextRenderable[] = [];
+  private _lastBoldItem: TextRenderable | null = null;
 
   constructor(
     renderer: CliRenderer,
@@ -131,16 +132,25 @@ export class RightSideBar {
     const firstLine = promptContent.split("\n")[0];
     const displayContent = firstLine;
     
+    // Remove bold from previously bold item
+    if (this._lastBoldItem) {
+      this._lastBoldItem.attributes = createTextAttributes({ bold: false });
+    }
+    
     const msgText = new TextRenderable(this._renderer, {
       content: displayContent,
-      fg: COLORS.userText,
+      fg: COLORS.foreground,
       padding: 1,
       width: "100%",
+      attributes: createTextAttributes({ bold: true }),
     });
 
     subscribeToThemeChanges([
-      { renderable: msgText, prop: "fg", colorKey: "userText" },
+      { renderable: msgText, prop: "fg", colorKey: "foreground" },
     ]);
+
+    // Track this as the last bold item
+    this._lastBoldItem = msgText;
 
     // Add at the top (newest first)
     this._contentContainer.add(msgText, 0);

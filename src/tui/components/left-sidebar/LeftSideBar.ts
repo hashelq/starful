@@ -1,10 +1,10 @@
 import { BoxRenderable, CliRenderer, ScrollBoxRenderable } from "@opentui/core";
-import { COLORS } from "../../engine/colors.js";
-import { subscribeToThemeChanges } from "../../engine/theme.js";
-import { getFoldedSections } from "../../engine/ui-config.js";
-import { getSidebarRegistry, createCategoryId, createButtonId, type SidebarCategory } from "./sidebar/index.js";
-import { SidebarCategory as SidebarCategoryClass } from "./sidebar/category.js";
-import { StatusMatrix } from "./sidebar/status-matrix/index.js";
+import { COLORS } from "../../../engine/colors.js";
+import { subscribeToThemeChanges } from "../../../engine/theme.js";
+import { getFoldedSections } from "../../../engine/ui-config.js";
+import { getSidebarRegistry, createCategoryId, createButtonId, type SidebarCategory } from "./index.js";
+import { SidebarCategory as SidebarCategoryClass } from "./category.js";
+import { StatusMatrix } from "./status-matrix/index.js";
 
 /**
  * LeftSideBar - Main sidebar component using the registry system

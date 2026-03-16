@@ -28,7 +28,7 @@ import {
 import {
   LeftSideBar,
   registerDefaultLeftSidebarCategories,
-} from "./components/LeftSideBar.js";
+} from "./components/left-sidebar/LeftSideBar.js";
 import { RightSideBar } from "./components/RightSideBar.js";
 import {
   createCommandRegistry,

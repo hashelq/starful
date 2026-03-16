@@ -9,6 +9,23 @@ import type {
 } from "../types/api-types.js";
 
 /**
+ * LLM Provider interface
+ * All providers must implement this interface
+ */
+export interface LLMProvider {
+  /** Unique provider identifier */
+  name: string;
+  chat(
+    model: string,
+    messages?: any[],
+    tools?: any[],
+    signal?: AbortSignal,
+  ): Promise<AsyncIterable<ChatResponse>>;
+   
+  listModels(): Promise<ListModelsResponse>;
+}
+
+/**
  * Common options for chat completion
  */
 export interface ChatOptions {
@@ -100,7 +117,7 @@ export interface ListModelsResponse {
 /**
  * Base REST client for LLM providers
  */
-export abstract class RestLLMClient {
+export abstract class RestLLMClient implements LLMProvider {
   /** Unique identifier for this provider implementation */
   name: string = "generic";
 

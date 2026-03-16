@@ -1,5 +1,5 @@
 import { OllamaClient } from "./ollama-client.js";
-import type { ChatResponse, ListModelsResponse } from "./rest-client.js";
+import type { LLMProvider } from "./rest-client.js";
 import type { ProviderConfig } from "../../config.js";
 
 // Re-export for convenience
@@ -12,25 +12,9 @@ export type {
   CompletionResponse,
   ListModelsResponse,
   ModelInfo,
+  LLMProvider,
 } from "./rest-client.js";
 export type { OllamaOptions, OllamaChatOptions, OllamaCompletionOptions } from "./ollama-client.js";
-
-/**
- * LLM Provider interface
- * All providers must implement this interface
- */
-export interface LLMProvider {
-  /** Unique provider identifier */
-  name: string;
-  chat(
-    model: string,
-    messages?: any[],
-    tools?: any[],
-    signal?: AbortSignal,
-  ): Promise<AsyncIterable<ChatResponse>>;
-   
-  listModels(): Promise<ListModelsResponse>;
-}
 
 /**
  * Provider constructor type

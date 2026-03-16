@@ -17,8 +17,8 @@ export interface LLMProvider {
   name: string;
   chat(
     model: string,
-    messages?: any[],
-    tools?: any[],
+    messages?: ChatMessage[],
+    modelTools?: ModelTool[],
     signal?: AbortSignal,
   ): Promise<AsyncIterable<ChatResponse>>;
    

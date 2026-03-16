@@ -1,11 +1,11 @@
 import { Command, CommandCategories } from "./command.js";
 import { type UIImplementation, noopUI } from "../ui.js";
-import { setDefaultModel, parseDefaultModel, getAllModels } from "../config.js";
+import { setDefaultModel, parseDefaultModel } from "../config.js";
 
 /**
  * Model Command
  * Allows selecting and switching between available Ollama models
- * Categorizes models by provider and configured/inferred status
+ * Shows flat list in format: "provider/modelname:tag"
  */
 export class ModelCommand extends Command {
   private _ui: UIImplementation;
@@ -47,74 +47,24 @@ export class ModelCommand extends Command {
         return;
       }
 
-      // Get configured models by provider
-      const configuredModels = getAllModels();
-      
-      // Build sets for quick lookup
-      const configuredModelNames = new Set(configuredModels.map(m => m.name));
-      
-      // Separate configured vs inferred, then group by provider
-      const configuredByProvider = new Map<string, string[]>();
-      const inferredByProvider = new Map<string, string[]>();
-      
-      for (const name of modelNames) {
-        if (configuredModelNames.has(name)) {
-          // Find which provider this model belongs to
-          const modelConfig = configuredModels.find(m => m.name === name);
-          const prov = modelConfig?.provider || "ollama";
-          if (!configuredByProvider.has(prov)) {
-            configuredByProvider.set(prov, []);
-          }
-          configuredByProvider.get(prov)!.push(name);
-        } else {
-          // Inferred - assign to default "ollama" provider for now
-          // Could be enhanced to detect provider from model name patterns
-          if (!inferredByProvider.has("ollama")) {
-            inferredByProvider.set("ollama", []);
-          }
-          inferredByProvider.get("ollama")!.push(name);
-        }
-      }
-
-      // Build items with nested categories: Configured > provider > models, Inferred > provider > models
-      const items: string[] = [];
-      
-      // Configured section
-      if (configuredByProvider.size > 0) {
-        items.push("Configured");
-        for (const [prov, modelList] of configuredByProvider) {
-          items.push(`  ${prov}`);
-          for (const m of modelList) {
-            items.push(`    ${m}`);
-          }
-        }
-      }
-      
-      // Inferred section
-      if (inferredByProvider.size > 0) {
-        items.push("Inferred");
-        for (const [prov, modelList] of inferredByProvider) {
-          items.push(`  ${prov}`);
-          for (const m of modelList) {
-            items.push(`    ${m}`);
-          }
-        }
-      }
+      // Build flat list: "provider/modelname:tag"
+      const items = modelNames.map((name: string) => `${provider}/${name}`);
 
       // Show selection UI
       this._ui.promptSelect?.({
         title: "Select Model",
         items,
-        current: currentModel,
+        current: `${provider}/${currentModel}`,
       }).then((selected) => {
-        // Skip category headers (items starting with "Configured", "Inferred", or "  provider")
-        if (selected && !selected.startsWith("Configured") && !selected.startsWith("Inferred") && !selected.startsWith("  ")) {
-          setDefaultModel(provider, selected);
-          const newModel = `${provider}/${selected}`;
-          this._ui.showNotification?.(`Model: ${selected}`);
+        if (selected) {
+          // Extract model name from "provider/model" format
+          const modelName = selected.replace(/^[^/]+\//, "");
+          
+          setDefaultModel(provider, modelName);
+          this._ui.showNotification?.(`Model: ${modelName}`);
           
           if (this._onModelChange) {
-            this._onModelChange(newModel);
+            this._onModelChange(selected);
           }
         }
       });

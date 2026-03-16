@@ -121,8 +121,17 @@ export class OllamaClient extends RestLLMClient {
   }
 
   /**
-   * Chat completion using /api/chat endpoint
-   * Wraps Ollama-specific options in "options" object
+   * Check if using OpenAI-compatible endpoint (baseUrl provided) vs native Ollama (host:port)
+   */
+  private get isOpenAICompatible(): boolean {
+    // If baseUrl was explicitly provided (not constructed from host:port), use OpenAI-compatible endpoint
+    return !!this.config.baseUrl;
+  }
+
+  /**
+   * Chat completion using appropriate endpoint:
+   * - /api/chat for native Ollama (host:port)
+   * - /v1/chat/completions for OpenAI-compatible (baseUrl)
    */
   override async chat(
     model: string,
@@ -140,7 +149,12 @@ export class OllamaClient extends RestLLMClient {
       body.tools = tools;
     }
 
-    return this.postStream<ChatResponse>("/api/chat", body, signal);
+    // Use OpenAI-compatible endpoint if baseUrl was provided
+    const endpoint = this.isOpenAICompatible 
+      ? "/v1/chat/completions" 
+      : "/api/chat";
+
+    return this.postStream<ChatResponse>(endpoint, body, signal);
   }
 
   /**

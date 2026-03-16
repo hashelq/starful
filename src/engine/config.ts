@@ -75,7 +75,6 @@ export interface ConfigData {
 export class Config {
   private data: ConfigData;
   private _parsedDefaultModel: ({ id: ModelIndex } & ModelEntry) | undefined;
-  private _isValid: boolean = false;
 
   constructor(data: ConfigData) {
     this.data = data;
@@ -91,7 +90,6 @@ export class Config {
   private _validate(): void {
     this._validateProviders();
     this._validateModels();
-    this._isValid = true;
   }
 
   /**
@@ -128,7 +126,12 @@ export class Config {
     }
 
     for (const index of modelIndices) {
-      const [providerNameStr] = index.split("/") as [string];
+      // Use lastIndexOf to handle model names that might contain "/"
+      const lastSlash = index.lastIndexOf("/");
+      if (lastSlash === -1) {
+        throw new Error(`Model "${index}" must be in "provider/model" format`);
+      }
+      const providerNameStr = index.slice(0, lastSlash);
       const provider = providerName(providerNameStr);
       
       if (!this.data.providers[provider]) {
@@ -158,22 +161,23 @@ export class Config {
   /**
    * Get provider by name - returns undefined if not found
    */
-  getProvider(name: ProviderName): ProviderConfig {
-    return this.data.providers[name]!;
+  getProvider(name: string): ProviderConfig | undefined {
+    const branded = providerName(name);
+    return this.data.providers[branded];
   }
 
   /**
    * Check if provider exists
    */
-  hasProvider(name: string): ProviderName | undefined {
-    return name in this.data.providers ? providerName(name) : undefined;
+  hasProvider(name: string): boolean {
+    return providerName(name) in this.data.providers;
   }
 
   /**
-   * Get model by name - returns undefined if not found
+   * Get model by index - returns undefined if not found
    */
-  getModel(index: ModelIndex): ModelEntry {
-    return this.data.models[index]!;
+  getModel(index: ModelIndex): ModelEntry | undefined {
+    return this.data.models[index];
   }
 
   /**
@@ -395,9 +399,7 @@ export function getProviderConfig(
   providerType: string,
 ): ProviderConfig | undefined {
   const config = loadConfig();
-  const has = config.hasProvider(providerType);
-  if (!has) return undefined;
-  return config.getProvider(has);
+  return config.getProvider(providerType);
 }
 
 /**

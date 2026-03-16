@@ -119,7 +119,7 @@ async function main() {
   const providerConfig = getProviderConfig(provider);
   
   let llmProvider: LLMProvider = createLLMProvider(
-    providerConfig || { type: "ollama", host: "localhost", port: 11434, timeout: 120000 },
+    providerConfig || { base: "ollama", host: "localhost", port: 11434, timeout: 120000 },
     model
   );
 
@@ -273,7 +273,7 @@ async function main() {
       // Reinitialize provider with new config
       const newProviderConfig = getProviderConfig(provider);
       llmProvider = createLLMProvider(
-        newProviderConfig || { type: "ollama", host: "localhost", port: 11434, timeout: 120000 },
+        newProviderConfig || { base: "ollama", host: "localhost", port: 11434, timeout: 120000 },
         model
       );
       

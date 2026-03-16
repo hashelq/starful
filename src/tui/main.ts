@@ -115,7 +115,7 @@ async function main() {
   initColors();
 
   // AGENT: Initialize Ollama client with config
-  const { provider, model } = parseDefaultModel();
+  let { provider, model } = parseDefaultModel();
   const providerConfig = getProviderConfig(provider);
   
   const ollama = new OllamaClient({
@@ -262,13 +262,12 @@ async function main() {
       renderer.requestRender?.();
     };
 
-    // Handle model change - reinitialize with new model
+    // Handle model change - update the model variable for future requests
     const handleModelChange = (newModel: string) => {
-      // Update the model variable for future requests
       const parsed = parseDefaultModel();
-      // Force reload by re-parsing
-      const updated = parseDefaultModel();
-      notifications.show({ message: `Model changed to: ${updated.model}`, type: "info" });
+      provider = parsed.provider;
+      model = parsed.model;
+      notifications.show({ message: `Model changed to: ${model}`, type: "info" });
     };
 
     // Pass UI implementation to registry (ThemeCommand will use it)

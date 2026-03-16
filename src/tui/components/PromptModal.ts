@@ -310,22 +310,26 @@ export class PromptModal {
       }
       const lowerQuery = query.toLowerCase();
 
+      // Helper to parse "label::id" format
+      const parseItem = (item: string) => {
+        const trimmed = item.trim();
+        const separatorIndex = trimmed.indexOf("::");
+        const id = separatorIndex !== -1 ? trimmed.substring(0, separatorIndex) : trimmed;
+        return { id, label: trimmed };
+      };
+
       if (!lowerQuery) {
-        this._filteredItems = items.map((item, index) => ({
-          type: "item" as const,
-          id: item,
-          label: item,
-          index,
-        }));
+        this._filteredItems = items.map((item, index) => {
+          const { id, label } = parseItem(item);
+          return { type: "item" as const, id, label, index };
+        });
       } else {
         this._filteredItems = items
           .filter((item) => item.toLowerCase().includes(lowerQuery))
-          .map((item, index) => ({
-            type: "item" as const,
-            id: item,
-            label: item,
-            index,
-          }));
+          .map((item, index) => {
+            const { id, label } = parseItem(item);
+            return { type: "item" as const, id, label, index };
+          });
       }
     }
 

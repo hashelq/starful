@@ -372,7 +372,8 @@ export interface APIConfig {
   timeout?: number;          // Request timeout in milliseconds
   basepath?: string;         // Base path for Ollama server (default: "")
   token?: APIToken;          // Bearer authentication token
-  baseUrl?: string;           // Full base URL (takes precedence over host:port)
+  baseUrl?: string;          // Full base URL (takes precedence over host:port)
+  headers?: Record<string, string>;  // Custom HTTP headers
 }
 
 export interface APIStatus {

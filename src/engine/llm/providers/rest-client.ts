@@ -274,6 +274,8 @@ export abstract class RestLLMClient implements LLMProvider {
     modelTools?: ModelTool[],
     signal?: AbortSignal,
   ): Promise<AsyncIterable<ChatResponse>> {
+    console.log(`[LLM] chat() called - model: ${model}, messages: ${messages?.length}, baseUrl: ${this.baseUrl}`);
+    
     const body: Record<string, unknown> = {
       model,
       messages,
@@ -284,7 +286,10 @@ export abstract class RestLLMClient implements LLMProvider {
       body.tools = modelTools;
     }
 
-    return this.postStream<ChatResponse>("/v1/chat/completions", body, signal);
+    const endpoint = "/v1/chat/completions";
+    console.log(`[LLM] POST ${this.buildUrl(endpoint)}`);
+    
+    return this.postStream<ChatResponse>(endpoint, body, signal);
   }
 
   /**

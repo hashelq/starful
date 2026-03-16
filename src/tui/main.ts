@@ -116,12 +116,16 @@ async function main() {
 
   // AGENT: Initialize LLM provider with config
   let { provider, model } = parseDefaultModel();
+  console.log(`[main] parseDefaultModel() - provider: ${provider}, model: ${model}`);
+  
   const providerConfig = getProviderConfig(provider);
+  console.log(`[main] getProviderConfig(${provider}):`, providerConfig);
   
   let llmProvider: LLMProvider = createLLMProvider(
     providerConfig || { base: "ollama", host: "localhost", port: 11434, timeout: 120000 },
     model
   );
+  console.log(`[main] llmProvider created:`, llmProvider.constructor.name);
 
   // Create CLI renderer with keyboard shortcuts
   const renderer = await createCliRenderer({
@@ -174,6 +178,7 @@ async function main() {
       },
     ],
   });
+  renderer.console.show();
 
   // AGENT: Cleanup on exit - destroy renderer and kill process
   const cleanup = () => {

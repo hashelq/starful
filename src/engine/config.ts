@@ -45,6 +45,7 @@ export interface ProviderConfig {
   port?: number;
   baseUrl?: string;
   timeout?: number;
+  headers?: Record<string, string>;
 }
 
 export type ProvidersConfig = Record<ProviderName, ProviderConfig>;

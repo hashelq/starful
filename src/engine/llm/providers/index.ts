@@ -1,9 +1,9 @@
-import { OllamaClient } from "./ollama-client.js";
 import type { LLMProvider } from "./rest-client.js";
 import type { ProviderConfig } from "../../config.js";
 
 // Re-export for convenience
-export { OllamaClient } from "./ollama-client.js";
+export { OpenAIClient } from "./openai-client.js";
+export { AnthropicClient } from "./anthropic-client.js";
 export { RestLLMClient } from "./rest-client.js";
 export type { 
   ChatOptions, 
@@ -14,7 +14,6 @@ export type {
   ModelInfo,
   LLMProvider,
 } from "./rest-client.js";
-export type { OllamaOptions, OllamaChatOptions, OllamaCompletionOptions } from "./ollama-client.js";
 
 /**
  * Provider constructor type
@@ -40,8 +39,14 @@ export function getRegisteredProviders(): string[] {
   return Array.from(providerRegistry.keys());
 }
 
+// Import providers for registration
+import { OpenAIClient } from "./openai-client.js";
+import { AnthropicClient } from "./anthropic-client.js";
+
 // Register built-in providers
-registerProvider("ollama", OllamaClient);
+registerProvider("openai", OpenAIClient);
+registerProvider("ollama", OpenAIClient); // Ollama uses the same client
+registerProvider("anthropic", AnthropicClient);
 
 /**
  * Extended provider config with base support
@@ -49,14 +54,20 @@ registerProvider("ollama", OllamaClient);
 export interface ExtendedProviderConfig {
   /** Provider type identifier */
   type: string;
-  /** Base provider to extend from (e.g., "ollama") */
+  /** Base provider to extend from (e.g., "openai", "ollama", "anthropic") */
   base?: string;
   /** Host address */
   host?: string;
   /** Port number */
   port?: number;
+  /** Full base URL (takes precedence over host:port) */
+  baseUrl?: string;
+  /** Custom headers */
+  headers?: Record<string, string>;
   /** Request timeout */
   timeout?: number;
+  /** Endpoint type: "ollama" or "openai" */
+  endpointType?: "ollama" | "openai";
 }
 
 /**
@@ -66,12 +77,19 @@ export interface ExtendedProviderConfig {
 export function createLLMProvider(providerConfig: ProviderConfig, _model: string): LLMProvider {
   const type = providerConfig.base;
   
+  console.log(`[createLLMProvider] type: ${type}`);
+  console.log(`[createLLMProvider] config:`, providerConfig);
+  
   // Look up provider in registry
   const ProviderClass = providerRegistry.get(type);
   
+  console.log(`[createLLMProvider] ProviderClass found:`, !!ProviderClass);
+  
   if (ProviderClass) {
     // Create instance with config
-    return new ProviderClass(providerConfig);
+    const instance = new ProviderClass(providerConfig as ExtendedProviderConfig);
+    console.log(`[createLLMProvider] Created provider instance:`, instance.constructor.name);
+    return instance;
   }
   
   // If not found, check if it has a "base" property to extend another provider
@@ -83,16 +101,17 @@ export function createLLMProvider(providerConfig: ProviderConfig, _model: string
       const BaseProviderClass = providerRegistry.get(baseType);
       if (BaseProviderClass) {
         // Create instance - the base provider should handle custom config
-        return new BaseProviderClass(providerConfig);
+        return new BaseProviderClass(providerConfig as ExtendedProviderConfig);
       }
     }
   }
   
-  // Default fallback to Ollama
-  console.warn(`Provider "${type}" not found, falling back to ollama`);
-  return new OllamaClient({
+  // Default fallback to OpenAIClient
+  console.warn(`Provider "${type}" not found, falling back to openai`);
+  return new OpenAIClient({
     host: "localhost",
     port: 11434,
     timeout: 120000,
+    endpointType: "ollama",
   });
 }

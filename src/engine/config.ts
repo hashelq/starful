@@ -2,6 +2,29 @@ import fs from "node:fs";
 import path from "node:path";
 
 /**
+ * Branded types for type safety
+ */
+export const ModelNameBrand = Symbol("ModelName");
+export type ModelName = string & { readonly [ModelNameBrand]: unique symbol };
+
+export const ProviderNameBrand = Symbol("ProviderName");
+export type ProviderName = string & { readonly [ProviderNameBrand]: unique symbol };
+
+/**
+ * Brand a string as ModelName
+ */
+export function modelName(value: string): ModelName {
+  return value as ModelName;
+}
+
+/**
+ * Brand a string as ProviderName  
+ */
+export function providerName(value: string): ProviderName {
+  return value as ProviderName;
+}
+
+/**
  * Provider configuration types
  */
 export interface OllamaProviderConfig {
@@ -19,11 +42,16 @@ export interface ModelEntry {
 }
 
 /**
+ * Models as Record<modelName, { provider, name }>
+ */
+export type ModelsConfig = Record<string, ModelEntry>;
+
+/**
  * Full configuration interface
  */
 export interface Config {
   providers: ProviderConfig[];
-  models: ModelEntry[];
+  models: ModelsConfig;
   defaultModel: string;
 }
 
@@ -39,12 +67,12 @@ export const DEFAULT_CONFIG: Config = {
       timeout: 120000,
     },
   ],
-  models: [
-    {
+  models: {
+    "qwen3.5:35b-better": {
       provider: "ollama",
       name: "qwen3.5:35b-better",
     },
-  ],
+  },
   defaultModel: "ollama/qwen3.5:35b-better",
 };
 
@@ -172,12 +200,7 @@ export function setDefaultModel(provider: string, modelName: string): void {
   }
   
   // Ensure model exists for provider
-  const existingModel = config.models.find(m => m.provider === provider);
-  if (existingModel) {
-    existingModel.name = modelName;
-  } else {
-    config.models.push({ provider, name: modelName });
-  }
+  config.models[modelName] = { provider, name: modelName };
   
   saveConfig(config);
 }
@@ -191,11 +214,14 @@ export function getProviderConfig(providerType: string): ProviderConfig | undefi
 }
 
 /**
- * Get all models
+ * Get all models as array
  */
 export function getAllModels(): ModelEntry[] {
   const config = loadConfig();
-  return config.models;
+  return Object.entries(config.models).map(([name, entry]) => ({
+    provider: entry.provider,
+    name,
+  }));
 }
 
 /**

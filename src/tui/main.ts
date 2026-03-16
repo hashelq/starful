@@ -150,6 +150,15 @@ async function main() {
           return true; // Consume to prevent exit when input has content
         }
         
+        // Check for Escape - cancel ongoing stream
+        if (key && key.name === "escape") {
+          if (appState.isGenerating && currentAbortController) {
+            currentAbortController.abort();
+            notifications.show({ message: "Stream cancelled", type: "info" });
+            return true; // Stop propagation
+          }
+        }
+        
         // Check for Ctrl+Q - quit the app
         if (key && key.ctrl && key.name === "q") {
           cleanup();

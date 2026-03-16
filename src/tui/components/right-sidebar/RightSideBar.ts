@@ -65,7 +65,6 @@ export class RightSideBar {
     const title = new TextRenderable(renderer, {
       content: "History",
       fg: COLORS.textMuted,
-      padding: 1,
       attributes: createTextAttributes({ bold: true }),
     });
     this._pane.add(title);
@@ -109,7 +108,6 @@ export class RightSideBar {
       const msgText = new TextRenderable(this._renderer, {
         content: content,
         fg: isUser ? COLORS.userText : COLORS.assistantText,
-        padding: 1,
         width: "100%",
       });
 
@@ -140,7 +138,6 @@ export class RightSideBar {
     const msgText = new TextRenderable(this._renderer, {
       content: displayContent,
       fg: COLORS.foreground,
-      padding: 1,
       width: "100%",
       attributes: createTextAttributes({ bold: true }),
     });

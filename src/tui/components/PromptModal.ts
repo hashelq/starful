@@ -531,13 +531,17 @@ export class PromptModal {
         this._categoryHeaders.push(header);
         this._itemsContainer.add(header);
       } else {
+        // Check if this is the current/selected model (for select mode)
+        const isCurrent = this._mode.type === "select" && this._mode.current && node.id === this._mode.current;
+        
         const item = new TextRenderable(this._renderer, {
           content: `    ${node.label}`,
           width: "100%",
           flexGrow: 1,
           flexShrink: 0,
           height: 1,
-          fg: COLORS.text,
+          fg: isCurrent ? COLORS.primary : COLORS.text,
+          attributes: isCurrent ? createTextAttributes({ bold: true }) : undefined,
           paddingX: 1,
           id: node.id,
         });

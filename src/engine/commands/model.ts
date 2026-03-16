@@ -58,14 +58,19 @@ export class ModelCommand extends Command {
         current: `    ${provider}/${currentModel}::${currentModel}`,
       }).then((selected) => {
         if (selected) {
-          // Extract id from "label::id" format (everything after ::)
-          const modelName = selected.split("::")[1] || selected;
+          // Extract id from "label::id" format
+          // selected format: "    provider/model::modelname"
+          const idPart = selected.split("::")[1] || selected;
+          // Now idPart is "provider/modelname", split by /
+          const lastSlash = idPart.lastIndexOf("/");
+          const prov = idPart.substring(0, lastSlash);
+          const modelName = idPart.substring(lastSlash + 1);
           
-          setDefaultModel(provider, modelName);
+          setDefaultModel(prov, modelName);
           this._ui.showNotification?.(`Model: ${modelName}`);
           
           if (this._onModelChange) {
-            this._onModelChange(`${provider}/${modelName}`);
+            this._onModelChange(`${prov}/${modelName}`);
           }
         }
       });

@@ -10,6 +10,7 @@ import {
   createTextAttributes,
 } from "@opentui/core";
 import { OllamaClient } from "../engine/llm/implementations/ollama-client.js";
+import { createLLMProvider, type LLMProvider } from "../engine/llm/providers/index.js";
 import { CodeBlock } from "./components/CodeBlock.js";
 import {
   createMarkdownRenderable,
@@ -114,15 +115,14 @@ async function main() {
   // AGENT: Initialize colors based on theme config
   initColors();
 
-  // AGENT: Initialize Ollama client with config
+  // AGENT: Initialize LLM provider with config
   let { provider, model } = parseDefaultModel();
   const providerConfig = getProviderConfig(provider);
   
-  const ollama = new OllamaClient({
-    host: providerConfig?.host ?? "localhost",
-    port: providerConfig?.port ?? 11434,
-    timeout: providerConfig?.timeout ?? 120000,
-  });
+  let llmProvider: LLMProvider = createLLMProvider(
+    providerConfig || { type: "ollama", host: "localhost", port: 11434, timeout: 120000 },
+    model
+  );
 
   // Create CLI renderer with keyboard shortcuts
   const renderer = await createCliRenderer({
@@ -267,6 +267,14 @@ async function main() {
       const parsed = parseDefaultModel();
       provider = parsed.provider;
       model = parsed.model;
+      
+      // Reinitialize provider with new config
+      const newProviderConfig = getProviderConfig(provider);
+      llmProvider = createLLMProvider(
+        newProviderConfig || { type: "ollama", host: "localhost", port: 11434, timeout: 120000 },
+        model
+      );
+      
       notifications.show({ message: `Model changed to: ${model}`, type: "info" });
     };
 
@@ -276,7 +284,7 @@ async function main() {
       onRevert: handleRevert,
       onShowModel: handleShowModel,
       onToggleCentered: handleToggleCentered,
-      ollamaClient: ollama,
+      ollamaClient: llmProvider,
       onModelChange: handleModelChange,
     });
 
@@ -469,7 +477,7 @@ Start by asking me something!`;
       // Create AbortController for cancelling the stream
       currentAbortController = new AbortController();
 
-      const chatStream = await ollama.chat(
+      const chatStream = await llmProvider.chat(
         model,
         messagesForOllama,
         undefined,

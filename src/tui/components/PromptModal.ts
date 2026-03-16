@@ -20,7 +20,12 @@ import { setFocused, setUnfocused } from "../state.js";
  * Tree node for command list (can be category header or command)
  */
 type PromptTreeNode =
-  | { type: "category"; category?: CommandCategory; title?: string; index: number }
+  | {
+      type: "category";
+      category?: CommandCategory;
+      title?: string;
+      index: number;
+    }
   | { type: "item"; id: string; label: string; index: number };
 
 /**
@@ -208,12 +213,36 @@ export class PromptModal {
 
     // Subscribe to theme changes for all modal colors
     subscribeToThemeChanges([
-      { renderable: backgroundLayer, prop: 'backgroundColor', colorKey: 'background' },
-      { renderable: this._shadowBox, prop: 'backgroundColor', colorKey: 'background' },
-      { renderable: this._modalBox, prop: 'backgroundColor', colorKey: 'background' },
-      { renderable: this._searchInput, prop: 'textColor', colorKey: 'textInput' },
-      { renderable: this._searchInput, prop: 'placeholderColor', colorKey: 'textInput' },
-      { renderable: this._searchInput, prop: 'backgroundColor', colorKey: 'surface' },
+      {
+        renderable: backgroundLayer,
+        prop: "backgroundColor",
+        colorKey: "background",
+      },
+      {
+        renderable: this._shadowBox,
+        prop: "backgroundColor",
+        colorKey: "background",
+      },
+      {
+        renderable: this._modalBox,
+        prop: "backgroundColor",
+        colorKey: "background",
+      },
+      {
+        renderable: this._searchInput,
+        prop: "textColor",
+        colorKey: "textInput",
+      },
+      {
+        renderable: this._searchInput,
+        prop: "placeholderColor",
+        colorKey: "textInput",
+      },
+      {
+        renderable: this._searchInput,
+        prop: "backgroundColor",
+        colorKey: "surface",
+      },
     ]);
 
     // Initially hidden
@@ -314,7 +343,10 @@ export class PromptModal {
       const parseItem = (item: string) => {
         const trimmed = item.trim();
         const separatorIndex = trimmed.indexOf("::");
-        const id = separatorIndex !== -1 ? trimmed.substring(0, separatorIndex) : trimmed;
+        const id =
+          separatorIndex !== -1
+            ? trimmed.substring(0, separatorIndex)
+            : trimmed;
         return { id, label: trimmed };
       };
 
@@ -335,7 +367,7 @@ export class PromptModal {
 
     // Find first selectable item (not a category)
     const firstItemIndex = this._filteredItems.findIndex(
-      (item) => item.type === "item"
+      (item) => item.type === "item",
     );
     this._selectedIndex = firstItemIndex >= 0 ? firstItemIndex : 0;
     this._renderItems();
@@ -348,21 +380,21 @@ export class PromptModal {
   private _moveSelection(delta: number): void {
     let newIndex = this._selectedIndex;
     const max = this._filteredItems.length - 1;
-    
+
     // Keep moving until we find a valid item (not a category)
     do {
       newIndex = Math.max(0, Math.min(max, newIndex + delta));
       const node = this._filteredItems[newIndex];
-      
+
       // If it's an item, we're done. If it's a category, continue searching.
       if (node && node.type === "item") {
         break;
       }
-      
+
       // Prevent infinite loop if all items are filtered out
       if (newIndex === 0 || newIndex === max) break;
     } while (true);
-    
+
     this._selectedIndex = newIndex;
     this._updateSelection();
   }
@@ -475,40 +507,23 @@ export class PromptModal {
 
     // For select mode, detect categories by indentation:
     // - Top category: no indentation (e.g., "Configured")
-    // - Subcategory: 2 spaces (e.g., "  ollama")  
+    // - Subcategory: 2 spaces (e.g., "  ollama")
     // - Items: 4+ spaces (e.g., "    model-name")
     this._filteredItems = this._mode.items?.map((item, index) => {
       if (!item) return { type: "item" as const, id: "", label: "", index };
       // Check indentation level
-      const leadingSpaces = item.match(/^(\s*)/)?.[1].length || 0;
-      
-      if (leadingSpaces === 0) {
-        // Top category - no indentation
-        return {
-          type: "category" as const,
-          title: item,
-          index,
-        };
-      } else if (leadingSpaces === 2) {
-        // Subcategory - 2 spaces
-        return {
-          type: "category" as const,
-          title: item,
-          index,
-        };
-      } else {
-        // Regular item - 4+ spaces - support "label::id" format
-        const trimmed = item.trim();
-        const separatorIndex = trimmed.indexOf("::");
-        const id = separatorIndex !== -1 ? trimmed.substring(0, separatorIndex) : trimmed;
-        const label = trimmed;
-        return {
-          type: "item" as const,
-          id: id,
-          label: label,
-          index,
-        };
-      }
+      // Regular item - 4+ spaces - support "label::id" format
+      const trimmed = item.trim();
+      const separatorIndex = trimmed.indexOf("::");
+      const id =
+        separatorIndex !== -1 ? trimmed.substring(0, separatorIndex) : trimmed;
+      const label = trimmed;
+      return {
+        type: "item" as const,
+        id: id,
+        label: label,
+        index,
+      };
     });
   }
 
@@ -530,7 +545,11 @@ export class PromptModal {
     for (const node of this._filteredItems) {
       if (node.type === "category") {
         // Use title if provided, otherwise fallback to category
-        const title = node.title || (node.category ? `${node.category.icon || ""} ${node.category.name}` : "");
+        const title =
+          node.title ||
+          (node.category
+            ? `${node.category.icon || ""} ${node.category.name}`
+            : "");
         const header = new TextRenderable(this._renderer, {
           content: `  ${title}`,
           width: "100%",
@@ -545,8 +564,11 @@ export class PromptModal {
         this._itemsContainer.add(header);
       } else {
         // Check if this is the current/selected model (for select mode)
-        const isCurrent = this._mode.type === "select" && this._mode.current && node.id === this._mode.current;
-        
+        const isCurrent =
+          this._mode.type === "select" &&
+          this._mode.current &&
+          node.id === this._mode.current;
+
         const item = new TextRenderable(this._renderer, {
           content: `    ${node.label}`,
           width: "100%",
@@ -554,7 +576,9 @@ export class PromptModal {
           flexShrink: 0,
           height: 1,
           fg: isCurrent ? COLORS.primary : COLORS.text,
-          attributes: isCurrent ? createTextAttributes({ bold: true }) : undefined,
+          attributes: isCurrent
+            ? createTextAttributes({ bold: true })
+            : undefined,
           paddingX: 1,
           id: node.id,
         });
@@ -611,7 +635,7 @@ export class PromptModal {
       this._filteredItems = this._buildTree(this._mode.registry.getAll());
     } else {
       this._buildSelectItems();
-      
+
       // If there's a current selection, find and select it
       const selectMode = this._mode;
       if (selectMode.type === "select" && selectMode.current) {
@@ -635,7 +659,6 @@ export class PromptModal {
 
     // Focus the search input - like input.focus() on line 96 of main.ts
     this._searchInput.focus();
-
 
     // Request render to show everything
     this._renderer.requestRender?.();

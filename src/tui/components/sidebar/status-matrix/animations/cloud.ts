@@ -27,7 +27,6 @@ export class CloudAnimation extends Animation {
     const getCloudDensity = (cx: number, cy: number, px: number, py: number) => {
       const dx = px - cx;
       const dy = py - cy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
       // Fluffy cloud shape
       const cloudWidth = 8;
       const cloudHeight = 3;

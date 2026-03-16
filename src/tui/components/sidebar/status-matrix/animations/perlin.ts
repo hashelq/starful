@@ -10,7 +10,7 @@ export class PerlinAnimation extends Animation {
     return { speed: 0.08, colorScale: 1 };
   }
   
-  render(tick: number, x: number, y: number, width: number, height: number): AnimationFrame {
+  render(tick: number, x: number, y: number, _width: number, _height: number): AnimationFrame {
     const t = tick * this.config.speed;
     
     // Simplified Perlin-like noise

@@ -10,15 +10,10 @@ export class GlitchAnimation extends Animation {
     return { speed: 0.3, colorScale: 1 };
   }
   
-  render(tick: number, x: number, y: number, width: number, height: number): AnimationFrame {
-    const t = tick * this.config.speed;
-    
+  render(_tick: number, x: number, y: number, _width: number, _height: number): AnimationFrame {
     // Random glitch lines
     const glitchLine = Math.random() > 0.995;
     const horizontalGlitch = Math.random() > 0.997;
-    
-    // RGB split effect
-    const rgbOffset = Math.sin(t * 10) * 2;
     
     // Scan lines
     const scanLine = y % 3 === 0;

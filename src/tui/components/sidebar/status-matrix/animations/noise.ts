@@ -16,7 +16,7 @@ export class NoiseAnimation extends Animation {
     return { speed: 1, colorScale: 1 };
   }
   
-  render(tick: number, x: number, y: number, width: number, height: number): AnimationFrame {
+  render(tick: number, x: number, y: number, _width: number, _height: number): AnimationFrame {
     const t = tick * 0.5;
     
     // Coherent noise - smooth changes over time

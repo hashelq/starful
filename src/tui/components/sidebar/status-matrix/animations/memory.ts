@@ -10,14 +10,12 @@ export class MemoryAnimation extends Animation {
     return { speed: 0.15, colorScale: 1 };
   }
   
-  render(tick: number, x: number, y: number, width: number, height: number): AnimationFrame {
+  render(tick: number, x: number, y: number, width: number, _height: number): AnimationFrame {
     const t = tick * this.config.speed;
     
     // Memory grid
     const blockWidth = 4;
     const blockHeight = 3;
-    const cols = Math.floor(width / blockWidth);
-    const rows = Math.floor(height / blockHeight);
     
     const col = Math.floor(x / blockWidth);
     const row = Math.floor(y / blockHeight);

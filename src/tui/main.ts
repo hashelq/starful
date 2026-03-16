@@ -9,7 +9,6 @@ import {
   parseKeypress,
   createTextAttributes,
 } from "@opentui/core";
-import { OllamaClient } from "../engine/llm/implementations/ollama-client.js";
 import { createLLMProvider, type LLMProvider } from "../engine/llm/providers/index.js";
 import { CodeBlock } from "./components/CodeBlock.js";
 import {
@@ -39,7 +38,6 @@ import { getTheme as getThemeFromConfig, isCentered, getCenteredWidth } from "..
 import { subscribeToThemeChanges } from "../engine/theme.js";
 import { TUIState } from "./state.js";
 import { loadConfig, parseDefaultModel, getProviderConfig } from "../engine/config.js";
-import { MockOllamaClient } from "../engine/llm/implementations/mock-ollama-client.js";
 import { copyToClipboard } from "./clipboard.js";
 
 // ============================================================================
@@ -110,8 +108,8 @@ async function main() {
   const messages: Message[] = [];
   let currentAbortController: AbortController | null = null;
 
-  // AGENT: Load configuration
-  const config = loadConfig();
+  // AGENT: Load configuration (has side effects like creating config file on first run)
+  loadConfig();
 
   // AGENT: Initialize colors based on theme config
   initColors();
@@ -267,7 +265,7 @@ async function main() {
     };
 
     // Handle model change - update the model variable for future requests
-    const handleModelChange = (newModel: string) => {
+    const handleModelChange = (_newModel: string) => {
       const parsed = parseDefaultModel();
       provider = parsed.provider;
       model = parsed.model;

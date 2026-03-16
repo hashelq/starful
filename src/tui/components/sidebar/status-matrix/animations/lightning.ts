@@ -10,7 +10,7 @@ export class LightningAnimation extends Animation {
     return { speed: 0.3, colorScale: 1 };
   }
   
-  render(tick: number, x: number, y: number, width: number, height: number): AnimationFrame {
+  render(tick: number, x: number, y: number, width: number, _height: number): AnimationFrame {
     const t = tick * this.config.speed;
     
     // Lightning bolt pattern

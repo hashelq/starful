@@ -1,5 +1,5 @@
 import { Command, CommandCategories } from "./command.js";
-import { isCentered, setCentered, getCenteredWidth } from "../ui-config.js";
+import { isCentered, setCentered } from "../ui-config.js";
 
 /**
  * CenteredMode Command
@@ -23,8 +23,6 @@ export class CenteredModeCommand extends Command {
     const next = !current;
     
     setCentered(next);
-    
-    const status = next ? "ON" : "OFF";
     
     // Notify UI to update
     if (this._onToggle) {

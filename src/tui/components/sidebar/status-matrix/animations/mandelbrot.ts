@@ -10,9 +10,7 @@ export class MandelbrotAnimation extends Animation {
     return { speed: 0.1, colorScale: 1 };
   }
   
-  render(tick: number, x: number, y: number, width: number, height: number): AnimationFrame {
-    const t = tick * this.config.speed;
-    
+  render(_tick: number, x: number, y: number, width: number, height: number): AnimationFrame {
     // Mandelbrot set calculation
     const x0 = (x / width) * 3.5 - 2.5;
     const y0 = (y / height) * 2 - 1;

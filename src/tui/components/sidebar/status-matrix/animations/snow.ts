@@ -10,17 +10,8 @@ export class SnowAnimation extends Animation {
     return { speed: 0.1, colorScale: 1 };
   }
   
-  render(tick: number, x: number, y: number, width: number, height: number): AnimationFrame {
+  render(tick: number, x: number, y: number, _width: number, _height: number): AnimationFrame {
     const t = tick * this.config.speed;
-    
-    // Snowflake fall position with sine wave sway
-    const fallSpeed = 0.3;
-    const swaySpeed = 0.5;
-    const swayAmount = 2;
-    
-    // Calculate snowflake Y position (wrapping)
-    const flakeY = ((y * 0.5 + t * fallSpeed * 10) % (height + 5)) - 2;
-    const flakeX = x + Math.sin(t * swaySpeed + y * 0.3) * swayAmount;
     
     // Create multiple layers of snow
     const layer1 = Math.abs(Math.sin(x * 0.5 + t) * Math.cos(y * 0.3 - t * 0.5)) > 0.7;

@@ -10,8 +10,8 @@ export class FractalAnimation extends Animation {
     return { speed: 0.1, colorScale: 1 };
   }
   
-  render(tick: number, x: number, y: number, width: number, height: number): AnimationFrame {
-    const t = tick * this.config.speed;
+  render(tick: number, x: number, y: number, _width: number, _height: number): AnimationFrame {
+    // tick is used below
     
     // Recursive subdivision pattern
     const scale = 1;
@@ -19,7 +19,6 @@ export class FractalAnimation extends Animation {
     const yScaled = y / scale + tick + Math.floor(Math.random() * 4);
     
     // Sierpinski-like pattern
-    const fractal = (xScaled + t) & (yScaled + t);
     const isFractal = (xScaled & yScaled) === 0;
     
     let intensity = 0;

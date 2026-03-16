@@ -11,12 +11,12 @@ export class AsteroidsAnimation extends Animation {
   }
   
   render(tick: number, x: number, y: number, width: number, height: number): AnimationFrame {
-    const t = tick * this.config.speed;
+    // Note: tick is intentionally unused but kept for potential animation
+    void tick;
     
     // Ship
     const shipX = Math.floor(width / 2);
     const shipY = Math.floor(height / 2);
-    const shipAngle = t * 0.5;
     
     // Asteroids
     const asteroids = [

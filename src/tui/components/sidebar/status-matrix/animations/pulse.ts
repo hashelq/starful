@@ -26,8 +26,6 @@ export class PulseAnimation extends Animation {
     // Pulse wave from center
     const t = tick * this.config.speed;
     const pulse = Math.sin(t - normDist * 8);
-    const intensity = Math.floor((pulse + 1) * 5 * (1 - normDist * 0.5) * this.config.colorScale);
-    
     const intensityVal = Math.floor((pulse + 1) * 5 * (1 - normDist * 0.5) * this.config.colorScale);
     const clamped = Math.max(0, Math.min(10, intensityVal));
     

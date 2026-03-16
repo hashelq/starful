@@ -24,7 +24,6 @@ export class DNAAnimation extends Animation {
     const strand2X = cx + Math.sin(phase2) * amplitude;
     
     // Rungs (base pairs)
-    const onRung = Math.abs(x - strand1X) < 2 || Math.abs(x - strand2X) < 2;
     const isRung = x > strand1X && x < strand2X && Math.abs(y % 3) < 1;
     
     let intensity = 0;

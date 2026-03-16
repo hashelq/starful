@@ -20,7 +20,6 @@ export class FiberAnimation extends Animation {
       { y: height * 0.7, amp: 3 },
     ];
     
-    let onFiber = false;
     let intensity = 0;
     let char = " ";
     
@@ -29,7 +28,6 @@ export class FiberAnimation extends Animation {
       const dy = Math.abs(y - fiberY);
       
       if (dy < 1) {
-        onFiber = true;
         // Light pulse traveling through
         const pulseX = ((t * 10 + x) % width);
         const distToPulse = Math.abs(x - pulseX);

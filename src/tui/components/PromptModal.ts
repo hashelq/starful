@@ -493,11 +493,15 @@ export class PromptModal {
           index,
         };
       } else {
-        // Regular item - 4+ spaces
+        // Regular item - 4+ spaces - support "label::id" format
+        const trimmed = item.trim();
+        const separatorIndex = trimmed.indexOf("::");
+        const id = separatorIndex !== -1 ? trimmed.substring(0, separatorIndex) : trimmed;
+        const label = trimmed;
         return {
           type: "item" as const,
-          id: item.trim(),
-          label: item,
+          id: id,
+          label: label,
           index,
         };
       }

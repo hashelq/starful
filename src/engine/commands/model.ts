@@ -47,17 +47,18 @@ export class ModelCommand extends Command {
         return;
       }
 
-      // Build flat list with format: "    display::id" (4 spaces prefix to mark as items)
-      const items = modelNames.map((name: string) => `    ${name}::${name}`);
+      // Build flat list with format: "    label::id" (4 spaces prefix to mark as items)
+      // Label: "provider/modelname", Id: "modelname"
+      const items = modelNames.map((name: string) => `    ${provider}/${name}::${name}`);
 
       // Show selection UI
       this._ui.promptSelect?.({
         title: "Select Model",
         items,
-        current: `${currentModel}::${currentModel}`,
+        current: `    ${provider}/${currentModel}::${currentModel}`,
       }).then((selected) => {
         if (selected) {
-          // Extract id from "label::id" format
+          // Extract id from "label::id" format (everything after ::)
           const modelName = selected.split("::")[1] || selected;
           
           setDefaultModel(provider, modelName);

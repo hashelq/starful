@@ -152,8 +152,8 @@ export class RightSideBar {
     // Track this as the last bold item
     this._lastBoldItem = msgText;
 
-    // Add at the top (newest first)
-    this._contentContainer.add(msgText, 0);
+    // Add at the end (oldest at top, newest at bottom)
+    this._contentContainer.add(msgText);
     this._messageItems.push(msgText);
 
     this._renderer.requestRender?.();

@@ -96,20 +96,20 @@ export class OllamaClient extends RestLLMClient {
   private config: Required<APIConfig>;
 
   constructor(config?: APIConfig) {
-    const host = config?.host ?? "localhost";
-    const port = config?.port ?? 11434;
-    const baseUrl = `http://${host}:${port}`;
+    // Use baseUrl if provided, otherwise construct from host:port
+    const baseUrl = config?.baseUrl ?? `http://${config?.host ?? "localhost"}:${config?.port ?? 11434}`;
     
     super(baseUrl, {
       timeout: config?.timeout ?? 60000,
     });
 
     this.config = {
-      host,
-      port,
+      host: config?.host ?? "localhost",
+      port: config?.port ?? 11434,
       timeout: config?.timeout ?? 60000,
       basepath: config?.basepath ?? "",
       token: config?.token ?? null,
+      baseUrl: config?.baseUrl ?? "",
     };
   }
 
@@ -124,7 +124,7 @@ export class OllamaClient extends RestLLMClient {
    * Chat completion using /api/chat endpoint
    * Wraps Ollama-specific options in "options" object
    */
-  async chat(
+  override async chat(
     model: string,
     messages?: ChatMessage[],
     tools?: ModelTool[],

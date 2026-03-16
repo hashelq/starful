@@ -368,10 +368,11 @@ export type APIToken = string | null;
 
 export interface APIConfig {
   host?: string;              // Server hostname, default "localhost"
-  port?: number;              // Server port, default 11434
-  timeout?: number;           // Request timeout in milliseconds
-  basepath?: string;          // Base path for Ollama server (default: "")
-  token?: APIToken;           // Bearer authentication token
+  port?: number;             // Server port, default 11434
+  timeout?: number;          // Request timeout in milliseconds
+  basepath?: string;         // Base path for Ollama server (default: "")
+  token?: APIToken;          // Bearer authentication token
+  baseUrl?: string;           // Full base URL (takes precedence over host:port)
 }
 
 export interface APIStatus {

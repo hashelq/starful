@@ -41,9 +41,10 @@ export function providerModelIndex(str: `${string}/${string}`): ModelIndex {
  */
 export interface ProviderConfig {
   base: string;
-  host: string;
-  port: number;
-  timeout: number;
+  host?: string;
+  port?: number;
+  baseUrl?: string;
+  timeout?: number;
 }
 
 export type ProvidersConfig = Record<ProviderName, ProviderConfig>;
@@ -104,11 +105,14 @@ export class Config {
     }
 
     for (const [name, config] of providers) {
-      if (!config.host) {
-        throw new Error(`Provider "${name}" missing required "host" field`);
-      }
-      if (!config.port || typeof config.port !== "number") {
-        throw new Error(`Provider "${name}" missing required "port" field`);
+      // Must have either host+port OR baseUrl
+      const hasHostPort = config.host && config.port;
+      const hasBaseUrl = config.baseUrl;
+      
+      if (!hasHostPort && !hasBaseUrl) {
+        throw new Error(
+          `Provider "${name}" must have either "host"+"port" or "baseUrl"`
+        );
       }
     }
   }

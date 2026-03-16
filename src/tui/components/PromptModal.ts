@@ -304,6 +304,10 @@ export class PromptModal {
     } else {
       // Select mode - filter items
       const items = this._mode.items;
+      if (!items) {
+        this._filteredItems = [];
+        return;
+      }
       const lowerQuery = query.toLowerCase();
 
       if (!lowerQuery) {
@@ -469,7 +473,8 @@ export class PromptModal {
     // - Top category: no indentation (e.g., "Configured")
     // - Subcategory: 2 spaces (e.g., "  ollama")  
     // - Items: 4+ spaces (e.g., "    model-name")
-    this._filteredItems = this._mode.items.map((item, index) => {
+    this._filteredItems = this._mode.items?.map((item, index) => {
+      if (!item) return { type: "item" as const, id: "", label: "", index };
       // Check indentation level
       const leadingSpaces = item.match(/^(\s*)/)?.[1].length || 0;
       
@@ -598,6 +603,17 @@ export class PromptModal {
       this._filteredItems = this._buildTree(this._mode.registry.getAll());
     } else {
       this._buildSelectItems();
+      
+      // If there's a current selection, find and select it
+      const selectMode = this._mode;
+      if (selectMode.type === "select" && selectMode.current) {
+        const currentIdx = this._filteredItems.findIndex(
+          (n) => n.type === "item" && n.id === selectMode.current,
+        );
+        if (currentIdx !== -1) {
+          this._selectedIndex = currentIdx;
+        }
+      }
     }
 
     this._selectedIndex = 0;

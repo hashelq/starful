@@ -47,24 +47,24 @@ export class ModelCommand extends Command {
         return;
       }
 
-      // Build flat list: "provider/modelname:tag"
-      const items = modelNames.map((name: string) => `${provider}/${name}`);
+      // Build flat list: "provider/modelname:tag" (4 spaces prefix to mark as items)
+      const items = modelNames.map((name: string) => `    ${provider}/${name}`);
 
       // Show selection UI
       this._ui.promptSelect?.({
         title: "Select Model",
         items,
-        current: `${provider}/${currentModel}`,
+        current: `    ${provider}/${currentModel}`,
       }).then((selected) => {
         if (selected) {
-          // Extract model name from "provider/model" format
-          const modelName = selected.replace(/^[^/]+\//, "");
+          // Extract model from selection (remove 4-space prefix and "provider/" prefix)
+          const modelName = selected.replace(/^    [^/]+\//, "");
           
           setDefaultModel(provider, modelName);
           this._ui.showNotification?.(`Model: ${modelName}`);
           
           if (this._onModelChange) {
-            this._onModelChange(selected);
+            this._onModelChange(selected.trim());
           }
         }
       });

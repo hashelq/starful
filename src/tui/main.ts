@@ -39,6 +39,7 @@ import { subscribeToThemeChanges } from "../engine/theme.js";
 import { TUIState } from "./state.js";
 import { loadConfig, parseDefaultModel, getProviderConfig } from "../engine/config.js";
 import { copyToClipboard } from "./clipboard.js";
+import type { UIImplementation } from "../engine/ui.js";
 
 // ============================================================================
 // Types
@@ -178,7 +179,6 @@ async function main() {
       },
     ],
   });
-  renderer.console.show();
 
   // AGENT: Cleanup on exit - destroy renderer and kill process
   const cleanup = () => {
@@ -207,7 +207,7 @@ async function main() {
   let commandModal: PromptModal;
   {
     // Create TUI-specific UI implementation
-    const tuiUI = {
+    const tuiUI: UIImplementation = {
       promptSelect: async (options: {
         title: string;
         items: string[];
@@ -236,6 +236,14 @@ async function main() {
 
       showNotification: (message: string) => {
         notifications.show({ message });
+      },
+
+      focusInput: () => {
+        promptInput.focus();
+      },
+
+      toggleConsole: () => {
+        renderer.console.toggle();
       },
     };
 

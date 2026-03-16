@@ -37,6 +37,11 @@ export interface UIImplementation {
    * Focus the main input field
    */
   focusInput(): void;
+  
+  /**
+   * Toggle the debug console
+   */
+  toggleConsole(): void;
 }
 
 /**
@@ -46,4 +51,5 @@ export const noopUI: UIImplementation = {
   promptSelect: async () => null,
   showNotification: () => {},
   focusInput: () => {},
+  toggleConsole: () => {},
 };

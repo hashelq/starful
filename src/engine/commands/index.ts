@@ -10,6 +10,7 @@ import { RevertCommand } from "./revert.js";
 import { ModelCommand } from "./model.js";
 import { ThemeCommand } from "./theme.js";
 import { CenteredModeCommand } from "./centered.js";
+import { ToggleConsoleCommand } from "./toggle-console.js";
 import { helpCommand } from "./help.js";
 import { aboutCommand } from "./about.js";
 
@@ -19,6 +20,7 @@ export { revertCommand } from "./revert.js";
 export { modelCommand } from "./model.js";
 export { themeCommand } from "./theme.js";
 export { centeredModeCommand } from "./centered.js";
+export { toggleConsoleCommand } from "./toggle-console.js";
 export { helpCommand } from "./help.js";
 export { aboutCommand } from "./about.js";
 
@@ -208,16 +210,10 @@ export function createCommandRegistry(
     onToggleCentered?: (centered: boolean) => void;
     ollamaClient?: any;
     onModelChange?: (model: string) => void;
+    onToggleConsole?: () => void;
   } = {}
 ): CommandRegistry {
   const registry = new CommandRegistry();
-
-  // Create handler overrides
-  const handlers = {
-    clear: () => options.onClearChat?.(),
-    revert: () => options.onRevert?.(),
-    model: () => options.onShowModel?.(),
-  };
 
   // Register commands - create new instances with handlers
   registry.register(new ClearCommand());
@@ -241,18 +237,9 @@ export function createCommandRegistry(
       options.onToggleCentered(centered);
     }
   }));
+  registry.register(new ToggleConsoleCommand(ui));
   registry.register(helpCommand);
   registry.register(aboutCommand);
-
-  // Override handlers after registration
-  const clear = registry.get("clear");
-  if (clear) (clear as any).handler = handlers.clear;
-
-  const revert = registry.get("revert");
-  if (revert) (revert as any).handler = handlers.revert;
-
-  const model = registry.get("model");
-  if (model) (model as any).handler = handlers.model;
 
   return registry;
 }

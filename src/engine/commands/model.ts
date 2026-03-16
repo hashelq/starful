@@ -39,8 +39,8 @@ export class ModelCommand extends Command {
 
     try {
       // Get available models from Ollama
-      const models = await this._ollamaClient.listModels();
-      const modelNames = models.map((m: any) => m.name);
+      const modelsResponse = await this._ollamaClient.listModels();
+      const modelNames = modelsResponse.models.map((m: any) => m.name);
       
       if (modelNames.length === 0) {
         this._ui.showNotification?.("No models available");

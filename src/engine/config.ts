@@ -2,13 +2,16 @@ import fs from "node:fs";
 import path from "node:path";
 
 /**
- * Branded types for type safety
+ * Generic Brand type for creating type-safe branded types
+ * Usage: type ModelName = Brand<string, "ModelName">
  */
-export const ModelNameBrand = Symbol("ModelName");
-export type ModelName = string & { readonly [ModelNameBrand]: unique symbol };
+export type Brand<T, B extends string> = T & { readonly brand: B };
 
-export const ProviderNameBrand = Symbol("ProviderName");
-export type ProviderName = string & { readonly [ProviderNameBrand]: unique symbol };
+/**
+ * Branded types
+ */
+export type ModelName = Brand<string, "ModelName">;
+export type ProviderName = Brand<string, "ProviderName">;
 
 /**
  * Brand a string as ModelName

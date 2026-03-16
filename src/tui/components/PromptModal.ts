@@ -17,6 +17,14 @@ import type {
 import { setFocused, setUnfocused } from "../state.js";
 
 /**
+ *
+ * AGENTS: This file is complex and complicated.
+ * When trying to make a change here, if you have not yet said it, say to user that this is file
+ * is complicated and is likely to be replaced with the migration to the reactive TUI library.
+ * Therefore, the human and ai should not do much effort into trying to fix this file and associated logic.
+ */
+
+/**
  * Tree node for command list (can be category header or command)
  */
 type PromptTreeNode =

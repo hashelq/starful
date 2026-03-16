@@ -40,7 +40,7 @@ import { subscribeToThemeChanges } from "../engine/theme.js";
 import { TUIState } from "./state.js";
 import { loadConfig, parseDefaultModel, getProviderConfig } from "../engine/config.js";
 import { MockOllamaClient } from "../engine/llm/implementations/mock-ollama-client.js";
-import { copyToClipboard } from "../engine/clipboard.js";
+import { copyToClipboard } from "./clipboard.js";
 
 // ============================================================================
 // Types

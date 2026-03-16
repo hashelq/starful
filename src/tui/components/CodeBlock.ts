@@ -10,7 +10,7 @@ import {
 import { FoldableBox } from "./FoldableBox.js";
 import { COLORS, getDefaultSyntaxStyle, getSyntaxStyle } from "../../engine/colors.js";
 import { subscribeToThemeChanges, themeService } from "../../engine/theme.js";
-import { copyToClipboard } from "../../engine/clipboard.js";
+import { copyToClipboard } from "../clipboard.js";
 
 /**
  * CodeBlock - A collapsible code block component with:

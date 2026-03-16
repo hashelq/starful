@@ -266,13 +266,26 @@ export abstract class RestLLMClient implements LLMProvider {
   
   /**
    * Chat completion (with message history)
+   * Default implementation for OpenAI-compatible APIs using /v1/chat/completions
    */
-  abstract chat(
+  async chat(
     model: string,
     messages?: ChatMessage[],
     modelTools?: ModelTool[],
     signal?: AbortSignal,
-  ): Promise<AsyncIterable<ChatResponse>>;
+  ): Promise<AsyncIterable<ChatResponse>> {
+    const body: Record<string, unknown> = {
+      model,
+      messages,
+      stream: true,
+    };
+
+    if (modelTools && modelTools.length > 0) {
+      body.tools = modelTools;
+    }
+
+    return this.postStream<ChatResponse>("/v1/chat/completions", body, signal);
+  }
 
   /**
    * List available models

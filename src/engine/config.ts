@@ -10,8 +10,9 @@ export type Brand<T, B extends string> = T & { readonly brand: B };
 /**
  * Branded types
  */
-export type ModelName = Brand<string, "ModelName">;
 export type ProviderName = Brand<string, "ProviderName">;
+export type ModelName = Brand<string, "ModelName">;
+export type ProviderModelName = `${ProviderName}/${ModelName}`;
 
 /**
  * Brand a string as ModelName
@@ -25,6 +26,25 @@ export function modelName(value: string): ModelName {
  */
 export function providerName(value: string): ProviderName {
   return value as ProviderName;
+}
+
+/**
+ * Create ProviderModelName from provider and model strings
+ * Format: "provider/model"
+ */
+export function providerModelName(provider: string, model: string): ProviderModelName {
+  return `${provider}/${model}` as ProviderModelName;
+}
+
+/**
+ * Parse a ProviderModelName string into provider and model strings
+ */
+export function parseProviderModelName(value: ProviderModelName): { provider: string; model: string } {
+  const parts = (value as string).split("/");
+  return {
+    provider: parts[0] ?? "",
+    model: parts.slice(1).join("/") ?? "",
+  };
 }
 
 /**
@@ -47,7 +67,7 @@ export interface ModelEntry {
 /**
  * Models as Record<modelName, { provider, name }>
  */
-export type ModelsConfig = Record<string, ModelEntry>;
+export type ModelsConfig = Record<ModelName, ModelEntry>;
 
 /**
  * Full configuration interface
@@ -55,7 +75,97 @@ export type ModelsConfig = Record<string, ModelEntry>;
 export interface Config {
   providers: ProviderConfig[];
   models: ModelsConfig;
-  defaultModel: string;
+  defaultModel: ProviderModelName;
+}
+
+/**
+ * Config class - type-safe access to configuration
+ * Parses default model once and remembers it
+ */
+export class ConfigClass {
+  private data: Config;
+  private _parsedDefaultModel: ({ id: ProviderModelName } & ModelEntry) | undefined;
+
+  constructor(data: Config) {
+    this.data = data;
+    // Parse default model once
+    this._parsedDefaultModel = this._parseDefaultModel();
+  }
+
+  private _parseDefaultModel(): ({ id: ProviderModelName } & ModelEntry) | undefined {
+    const defaultModel = this.data.defaultModel;
+    if (!defaultModel) return undefined;
+    
+    const { model } = parseProviderModelName(defaultModel);
+    const modelEntry = this.data.models[modelName(model)];
+    
+    if (!modelEntry) return undefined;
+    
+    return {
+      id: defaultModel,
+      ...modelEntry,
+    };
+  }
+
+  /**
+   * Get provider by name - returns undefined if not found
+   */
+  getProvider(name: string): ProviderConfig | undefined {
+    return this.data.providers.find(p => p.type === name);
+  }
+
+  /**
+   * Check if provider exists
+   */
+  hasProvider(name: string): boolean {
+    return this.data.providers.some(p => p.type === name);
+  }
+
+  /**
+   * Get model by name - returns undefined if not found
+   */
+  getModel(name: ModelName): ModelEntry | undefined {
+    return this.data.models[name];
+  }
+
+  /**
+   * Check if model exists
+   */
+  hasModel(name: ModelName): boolean {
+    return name in this.data.models;
+  }
+
+  /**
+   * Get default model - returns undefined if not set or doesn't exist
+   * Returns { id: ProviderModelName, provider, name } or undefined
+   */
+  getDefaultModel(): ({ id: ProviderModelName } & ModelEntry) | undefined {
+    return this._parsedDefaultModel;
+  }
+
+  /**
+   * Get all providers
+   */
+  getProviders(): ProviderConfig[] {
+    return this.data.providers;
+  }
+
+  /**
+   * Get all models
+   */
+  getModels(): Array<{ name: ModelName; provider: string }> {
+    return Object.entries(this.data.models).map(([name, entry]) => ({
+      name: name as ModelName,
+      provider: entry.provider,
+    }));
+  }
+
+  /**
+   * Get the raw config data (for serialization)
+   */
+  toJSON(): Config {
+    return this.data;
+  }
 }
 
 /**
@@ -71,12 +181,12 @@ export const DEFAULT_CONFIG: Config = {
     },
   ],
   models: {
-    "qwen3.5:35b-better": {
-      provider: "ollama",
-      name: "qwen3.5:35b-better",
+    [modelName("qwen3.5:35b-better")]: {
+      provider: providerName("ollama"),
+      name: modelName("qwen3.5:35b-better"),
     },
   },
-  defaultModel: "ollama/qwen3.5:35b-better",
+  defaultModel: providerModelName("ollama", "qwen3.5:35b-better"),
 };
 
 /**
@@ -105,9 +215,9 @@ function ensureConfigDir(): void {
 
 /**
  * Load configuration from file or return defaults
- * Creates config file with defaults on first run
+ * Returns ConfigClass for type-safe access
  */
-export function loadConfig(): Config {
+export function loadConfig(): ConfigClass {
   const configPath = getConfigPath();
   
   try {
@@ -118,7 +228,7 @@ export function loadConfig(): Config {
       
       // Save to ensure all defaults are present
       saveConfig(config);
-      return config;
+      return new ConfigClass(config);
     }
   } catch (error) {
     console.warn("Failed to load config, using defaults:", error);
@@ -126,18 +236,20 @@ export function loadConfig(): Config {
   
   // First run - save default config
   saveConfig(DEFAULT_CONFIG);
-  return { ...DEFAULT_CONFIG };
+  return new ConfigClass({ ...DEFAULT_CONFIG });
 }
 
 /**
  * Save configuration to file
  */
-export function saveConfig(config: Config): void {
+export function saveConfig(config: Config | ConfigClass): void {
   const configPath = getConfigPath();
   ensureConfigDir();
   
+  const data = config instanceof ConfigClass ? config.toJSON() : config;
+  
   try {
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8");
+    fs.writeFileSync(configPath, JSON.stringify(data, null, 2), "utf-8");
   } catch (error) {
     console.error("Failed to save config:", error);
   }
@@ -167,9 +279,9 @@ function mergeConfig(defaults: Config, loaded: Partial<Config>): Config {
 /**
  * Get default model in "provider/model" format
  */
-export function getDefaultModel(): string {
+export function getDefaultModel(): ProviderModelName | undefined {
   const config = loadConfig();
-  return config.defaultModel;
+  return config.getDefaultModel()?.id;
 }
 
 /**
@@ -177,24 +289,28 @@ export function getDefaultModel(): string {
  * Returns { provider: "ollama", model: "qwen3.5:35b-better" }
  */
 export function parseDefaultModel(): { provider: string; model: string } {
-  const defaultModel = getDefaultModel();
-  const [provider, ...modelParts] = defaultModel.split("/");
+  const config = loadConfig();
+  const defaultModel = config.getDefaultModel();
+  if (!defaultModel) {
+    return { provider: "ollama", model: "qwen3.5:35b-better" };
+  }
   return {
-    provider: provider || "ollama",
-    model: modelParts.join("/") || "qwen3.5:35b-better",
+    provider: defaultModel.provider,
+    model: defaultModel.name,
   };
 }
 
 /**
  * Set default model in "provider/model" format
  */
-export function setDefaultModel(provider: string, modelName: string): void {
+export function setDefaultModel(provider: string, model: string): void {
   const config = loadConfig();
-  config.defaultModel = `${provider}/${modelName}`;
+  const rawConfig = config.toJSON();
+  rawConfig.defaultModel = providerModelName(provider, model);
   
   // Ensure provider exists
-  if (!config.providers.find(p => (p as any).type === provider)) {
-    config.providers.push({
+  if (!config.hasProvider(provider)) {
+    rawConfig.providers.push({
       type: "ollama",
       host: "localhost",
       port: 11434,
@@ -203,9 +319,9 @@ export function setDefaultModel(provider: string, modelName: string): void {
   }
   
   // Ensure model exists for provider
-  config.models[modelName] = { provider, name: modelName };
+  rawConfig.models[modelName(model)] = { provider: providerName(provider), name: modelName(model) };
   
-  saveConfig(config);
+  saveConfig(rawConfig);
 }
 
 /**
@@ -213,18 +329,15 @@ export function setDefaultModel(provider: string, modelName: string): void {
  */
 export function getProviderConfig(providerType: string): ProviderConfig | undefined {
   const config = loadConfig();
-  return config.providers.find(p => p.type === providerType) as ProviderConfig | undefined;
+  return config.getProvider(providerType);
 }
 
 /**
  * Get all models as array
  */
-export function getAllModels(): ModelEntry[] {
+export function getAllModels(): Array<{ provider: string; name: ModelName }> {
   const config = loadConfig();
-  return Object.entries(config.models).map(([name, entry]) => ({
-    provider: entry.provider,
-    name,
-  }));
+  return config.getModels();
 }
 
 /**
@@ -248,7 +361,8 @@ export function getConfig(key?: string, subKey?: string): any {
  */
 export function updateConfig(updates: Partial<Config>): Config {
   const current = loadConfig();
-  const merged = mergeConfig(current, updates);
+  const currentData = current.toJSON();
+  const merged = mergeConfig(currentData, updates);
   saveConfig(merged);
   return merged;
 }

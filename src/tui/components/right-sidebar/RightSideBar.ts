@@ -1,6 +1,6 @@
 import { BoxRenderable, CliRenderer, ScrollBoxRenderable, TextRenderable, createTextAttributes } from "@opentui/core";
-import { COLORS } from "../../engine/colors.js";
-import { subscribeToThemeChanges } from "../../engine/theme.js";
+import { COLORS } from "../../../engine/colors.js";
+import { subscribeToThemeChanges } from "../../../engine/theme.js";
 
 /**
  * Message entry in history

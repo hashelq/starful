@@ -29,7 +29,7 @@ import {
   LeftSideBar,
   registerDefaultLeftSidebarCategories,
 } from "./components/left-sidebar/LeftSideBar.js";
-import { RightSideBar } from "./components/RightSideBar.js";
+import { RightSideBar } from "./components/right-sidebar/RightSideBar.js";
 import {
   createCommandRegistry,
   type CommandRegistry,

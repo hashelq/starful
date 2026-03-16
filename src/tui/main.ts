@@ -29,6 +29,7 @@ import {
   SideBar,
   registerDefaultSidebarCategories,
 } from "./components/SideBar.js";
+import { RightSideBar } from "./components/RightSideBar.js";
 import {
   createCommandRegistry,
   type CommandRegistry,
@@ -782,13 +783,20 @@ Start by asking me something!`;
     alignItems: isCenteredMode ? "center" : "stretch",
   });
 
+  // Right sidebar - shows file explorer, git status, etc.
+  const rightSideBar = new RightSideBar(renderer, {
+    width: 30,
+    threshold: 100,
+  });
+
   // Add all children to content container in order: figlet -> title -> scroll/history -> input
   contentContainer.add(scrollBox);
   contentContainer.add(inputContainer);
 
-  // Add left pane and content to main container
+  // Add left pane, content, and right pane to main container
   mainContainer.add(sideBar.renderable);
   mainContainer.add(contentContainer);
+  mainContainer.add(rightSideBar.renderable);
 
   // AGENT: Mount main container to renderer's root (root is readonly, use .add())
   renderer.root.add(mainContainer);

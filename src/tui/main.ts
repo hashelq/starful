@@ -347,7 +347,9 @@ async function main() {
         notifications.show({ message: "Copied!", type: "info" });
       }
       
+      // Always clear selection after copy attempt
       renderer.clearSelection();
+      renderer.requestRender?.();
       selectionStart.x = -1;
     };
   }

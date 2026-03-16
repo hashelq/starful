@@ -19,12 +19,21 @@ export interface ModelEntry {
 }
 
 /**
+ * Full configuration interface
+ */
+export interface Config {
+  providers: ProviderConfig[];
+  models: ModelEntry[];
+  defaultModel: string;
+}
+
+/**
  * Default configuration values
  */
-export const DEFAULT_CONFIG = {
+export const DEFAULT_CONFIG: Config = {
   providers: [
     {
-      type: "ollama" as const,
+      type: "ollama",
       host: "localhost",
       port: 11434,
       timeout: 120000,
@@ -40,9 +49,9 @@ export const DEFAULT_CONFIG = {
 };
 
 /**
- * Configuration type
+ * Configuration type (for backward compatibility)
  */
-export type Config = typeof DEFAULT_CONFIG;
+export type ConfigType = Config;
 
 /**
  * Get config file path

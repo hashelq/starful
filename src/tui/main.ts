@@ -823,7 +823,5 @@ Start by asking me something!`;
   process.on("SIGTERM", cleanup);
 }
 
-main().catch((err) => {
-  console.error("Error starting TUI:", err);
-  process.exit(1);
-});
+// Export main function for external use
+export { main };

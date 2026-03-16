@@ -1,4 +1,4 @@
-import { OllamaClient } from "../implementations/ollama-client.js";
+import { OllamaClient } from "./ollama-client.js";
 import type { OllamaProviderConfig, ProviderConfig } from "../../config.js";
 
 /**

@@ -42,6 +42,8 @@ export class RightSideBar {
       backgroundColor: COLORS.surfaceAlt,
       flexDirection: "column",
       gap: 0,
+      paddingX: 2,
+      paddingY: 1,
     });
 
     // Scroll box for content
@@ -127,7 +129,7 @@ export class RightSideBar {
   addPrompt(promptContent: string): void {
     // Get first line only (no wrap)
     const firstLine = promptContent.split("\n")[0];
-    const displayContent = "> " + firstLine;
+    const displayContent = firstLine;
     
     const msgText = new TextRenderable(this._renderer, {
       content: displayContent,

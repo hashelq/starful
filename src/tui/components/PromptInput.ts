@@ -24,6 +24,7 @@ export class PromptInput {
   private _renderer: RenderContext;
   private _searchSuggestions: SearchSuggestionsOverlay;
   private _options: PromptInputOptions;
+  private _isNavigating = false; // Track when navigating history with arrows
   
   constructor(
     renderer: RenderContext,
@@ -79,13 +80,17 @@ export class PromptInput {
       
       // Up arrow - previous
       if (key.name === "up") {
+        this._isNavigating = true;
         this._handleUpArrow(history);
+        this._isNavigating = false;
         return true;
       }
       
       // Down arrow - next
       if (key.name === "down") {
+        this._isNavigating = true;
         this._handleDownArrow(history);
+        this._isNavigating = false;
         return true;
       }
       
@@ -138,6 +143,11 @@ export class PromptInput {
   private _setupEventHandlers(): void {
     // Input changes - update search on every keystroke (not arrow keys)
     this.input.on(InputRenderableEvents.INPUT, (value: string) => {
+      // Skip search update when navigating history with arrow keys
+      if (this._isNavigating) {
+        return;
+      }
+      
       const history = getPromptHistory();
       
       if (value) {

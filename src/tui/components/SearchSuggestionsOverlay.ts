@@ -127,6 +127,7 @@ export class SearchSuggestionsOverlay extends BoxRenderable {
       if (item) this.remove(item.id);
     }
     this._suggestionItems = [];
+    this.visible = false;
     this.renderer.requestRender?.();
   }
 

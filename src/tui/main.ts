@@ -294,6 +294,9 @@ async function main() {
         model
       );
       
+      // Update model display
+      modelDisplay.content = `${provider}/${model}`;
+      
       notifications.show({ message: `Model changed to: ${model}`, type: "info" });
     };
 
@@ -486,7 +489,7 @@ Start by asking me something!`;
     maxWidth: centeredWidth,
     paddingX: 2,
     paddingY: 1,
-    height: 3,
+    height: 4,
     backgroundColor: COLORS.surfaceAlt,
     marginBottom: 1,
     overflow: "visible",
@@ -805,6 +808,14 @@ Start by asking me something!`;
   // Add input to container (use the inner input renderable)
   inputContainer.add(promptInput.input);
 
+  // AGENT: Model display - shows current provider/model below input
+  const modelDisplay = new TextRenderable(renderer, {
+    content: `${provider}/${model}`,
+    fg: COLORS.accent,
+    attributes: createTextAttributes({ bold: true }),
+  });
+  inputContainer.add(modelDisplay);
+
   // Add search suggestions to inputContainer (allows overflow above)
   inputContainer.add(searchSuggestions);
 
@@ -899,6 +910,8 @@ Start by asking me something!`;
     { renderable: figletBanner, prop: "color", colorKey: "dimText" },
     // Title text
     { renderable: titleText, prop: "fg", colorKey: "dimText" },
+    // Model display
+    { renderable: modelDisplay, prop: "fg", colorKey: "accent" },
     // History container (if has background)
     {
       renderable: historyContainer,

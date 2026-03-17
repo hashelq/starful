@@ -136,8 +136,8 @@ export class PromptInput {
   }
   
   private _setupEventHandlers(): void {
-    // Input changes - update search
-    this.input.on(InputRenderableEvents.CHANGE, (value: string) => {
+    // Input changes - update search on every keystroke (not arrow keys)
+    this.input.on(InputRenderableEvents.INPUT, (value: string) => {
       const history = getPromptHistory();
       
       if (value) {
@@ -147,7 +147,13 @@ export class PromptInput {
         } else {
           history.startSearch(value);
         }
-        this._searchSuggestions.show(value, history.getSearchMatches());
+        
+        const matches = history.getSearchMatches();
+        if (matches.length > 0) {
+          this._searchSuggestions.show(value, matches);
+        } else {
+          this._searchSuggestions.hide();
+        }
       } else {
         // Empty input - reset search
         history.resetSearch();

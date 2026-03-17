@@ -791,7 +791,7 @@ Start by asking me something!`;
 
   const sideBar = new LeftSideBar(renderer, {
     width: 35,
-    threshold: 80,
+    threshold: 128,
     onNavigate: (section: string) => {
       notifications.show({ message: `Navigate to: ${section}`, type: "info" });
     },
@@ -811,7 +811,7 @@ Start by asking me something!`;
   // Right sidebar - shows file explorer, git status, etc.
   const rightSideBar = new RightSideBar(renderer, {
     width: 30,
-    threshold: 100,
+    threshold: 128,
   });
 
   // Add all children to content container in order: figlet -> title -> scroll/history -> input

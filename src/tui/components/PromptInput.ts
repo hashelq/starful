@@ -41,7 +41,10 @@ export class PromptInput {
       textColor: COLORS.inputText,
       placeholderColor: COLORS.placeholderText,
     });
-    
+
+    // Set input reference for positioning suggestions overlay
+    this._searchSuggestions.setInputReference(this.input);
+
     this._setupKeyHandlers();
     this._setupEventHandlers();
   }

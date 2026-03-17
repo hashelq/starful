@@ -1,6 +1,7 @@
 import {
   BoxRenderable,
   TextRenderable,
+  type InputRenderable,
 } from "@opentui/core";
 import type { RenderContext } from "@opentui/core";
 import { COLORS } from "../../engine/colors.js";
@@ -22,6 +23,7 @@ export class SearchSuggestionsOverlay extends BoxRenderable {
   private _suggestions: string[] = [];
   private _prefix = "";
   private _isOverlayVisible = false;
+  private _inputReference: InputRenderable | null = null;
   
   constructor(
     public renderer: RenderContext,
@@ -41,6 +43,36 @@ export class SearchSuggestionsOverlay extends BoxRenderable {
     
     // Initially hidden
     this.hide();
+
+    // Listen to terminal resize to update position
+    renderer.on("resize", () => {
+      if (this._isOverlayVisible && this._inputReference) {
+        this._updatePosition();
+      }
+    });
+  }
+
+  /**
+   * Set the input reference for positioning
+   */
+  setInputReference(input: InputRenderable): void {
+    this._inputReference = input;
+  }
+  
+  /**
+   * Update position to follow input field
+   */
+  private _updatePosition(): void {
+    if (!this._inputReference) return;
+    
+    // Get input position (after layout)
+    const inputX = this._inputReference.x;
+    const inputY = this._inputReference.y;
+    const inputHeight = (this._inputReference as any).heightValue || 1;
+    
+    // Position below the input
+    this.top = inputY + inputHeight;
+    this.left = inputX;
   }
   
   /**
@@ -56,6 +88,9 @@ export class SearchSuggestionsOverlay extends BoxRenderable {
     this._suggestions = suggestions.slice(0, 8); // Max 8
     this._currentIndex = 0;
     this._isOverlayVisible = true;
+    
+    // Update position to follow input
+    this._updatePosition();
     
     // Clear existing suggestions
     for (const item of this._suggestionItems) {
@@ -80,6 +115,7 @@ export class SearchSuggestionsOverlay extends BoxRenderable {
       this.add(item);
     }
     
+    this.visible = true;
     this.renderer.requestRender?.();
   }
   

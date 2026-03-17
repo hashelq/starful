@@ -40,6 +40,7 @@ export class RightSideBar {
     this._pane = new BoxRenderable(renderer, {
       width: this._width,
       height: "100%",
+      backgroundColor: COLORS.surfaceAlt,
       flexDirection: "column",
       gap: 0,
       paddingX: 2,
@@ -73,6 +74,7 @@ export class RightSideBar {
 
     // Subscribe to theme changes
     subscribeToThemeChanges([
+      { renderable: this._pane, prop: 'backgroundColor', colorKey: 'surfaceAlt' },
       { renderable: title, prop: 'fg', colorKey: 'textMuted' },
     ]);
 

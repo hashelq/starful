@@ -122,9 +122,6 @@ async function main() {
   
   const providerConfig = getProviderConfig(provider);
   console.log(`[main] getProviderConfig(${provider}):`, providerConfig);
-
-  // Declare sideBar early so it's accessible later
-  let sideBar: LeftSideBar;
   
   let llmProvider: LLMProvider = createLLMProvider(
     providerConfig || { base: "ollama", host: "localhost", port: 11434, timeout: 120000 },
@@ -297,16 +294,6 @@ async function main() {
       notifications.show({ message: `Model changed to: ${model}`, type: "info" });
     };
 
-    // Create left sidebar (before creating command registry)
-    sideBar = new LeftSideBar(renderer, {
-      width: 35,
-      threshold: 80,
-      onNavigate: (section: string) => {
-        notifications.show({ message: `Navigate to: ${section}`, type: "info" });
-      },
-      isGeneratingFn: () => appState.isGenerating,
-    });
-
     // Pass UI implementation to registry (ThemeCommand will use it)
     const registry = createCommandRegistry(renderer, tuiUI, {
       onClearChat: handleClearChat,
@@ -315,7 +302,6 @@ async function main() {
       onToggleCentered: handleToggleCentered,
       ollamaClient: llmProvider,
       onModelChange: handleModelChange,
-      leftSidebar: sideBar,
     });
 
     // Set placeholders for command titles
@@ -791,9 +777,18 @@ Start by asking me something!`;
     gap: 1,
   });
 
-  // Left pane already created above for command registry
+  // Left pane - hides on narrow terminals, with navigation callback
   // Register default left sidebar categories first
   registerDefaultLeftSidebarCategories();
+
+  const sideBar = new LeftSideBar(renderer, {
+    width: 35,
+    threshold: 80,
+    onNavigate: (section: string) => {
+      notifications.show({ message: `Navigate to: ${section}`, type: "info" });
+    },
+    isGeneratingFn: () => appState.isGenerating,
+  });
 
   // Content container for the column layout (figlet, scrollbox, input)
   const contentContainer = new BoxRenderable(renderer, {

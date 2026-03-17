@@ -11,7 +11,6 @@ import { ModelCommand } from "./model.js";
 import { ThemeCommand } from "./theme.js";
 import { CenteredModeCommand } from "./centered.js";
 import { ToggleConsoleCommand } from "./toggle-console.js";
-import { ToggleVisibilityCommand } from "./toggle-visibility.js";
 import { helpCommand } from "./help.js";
 import { aboutCommand } from "./about.js";
 
@@ -212,7 +211,6 @@ export function createCommandRegistry(
     ollamaClient?: any;
     onModelChange?: (model: string) => void;
     onToggleConsole?: () => void;
-    leftSidebar?: { show(): void; hide(): void };
   } = {}
 ): CommandRegistry {
   const registry = new CommandRegistry();
@@ -240,12 +238,6 @@ export function createCommandRegistry(
     }
   }));
   registry.register(new ToggleConsoleCommand(ui));
-  
-  // Register left sidebar toggle if provided
-  if (options.leftSidebar) {
-    registry.register(new ToggleVisibilityCommand("Left Sidebar", options.leftSidebar));
-  }
-  
   registry.register(helpCommand);
   registry.register(aboutCommand);
 

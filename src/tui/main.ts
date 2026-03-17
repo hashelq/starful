@@ -782,12 +782,8 @@ Start by asking me something!`;
     isGenerating: () => appState.isGenerating,
     onExit: () => cleanup(),
     onSubmit: async (value: string) => {
-      // Add user message to history
+      // Add user message to history (includes adding to right sidebar)
       addStaticMessage("user", ` ${value}`);
-
-      // Add to right sidebar prompt list with message index
-      const messageIndex = messages.length - 1;
-      rightSideBar.addPrompt(value, messageIndex);
 
       // Build conversation history from existing messages
       const conversationHistory: Array<{

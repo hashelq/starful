@@ -201,7 +201,8 @@ async function main() {
   let searchSuggestions: SearchSuggestionsOverlay;
   {
     searchSuggestions = new SearchSuggestionsOverlay(renderer);
-    renderer.root.add(searchSuggestions);
+    // Add to inputContainer for relative positioning (allows overflow above)
+    // We'll add it after inputContainer is created
   }
 
   // Implement command modal (Ctrl+P)
@@ -456,6 +457,7 @@ Start by asking me something!`;
     height: 3,
     backgroundColor: COLORS.surfaceAlt,
     marginBottom: 1,
+    overflow: "visible",
   });
 
   // AGENT: Streams LLM response from Ollama - handles both thinking and content phases
@@ -767,6 +769,12 @@ Start by asking me something!`;
 
   // Add input to container (use the inner input renderable)
   inputContainer.add(promptInput.input);
+
+  // Add search suggestions to inputContainer (allows overflow above)
+  inputContainer.add(searchSuggestions);
+
+  // Set input container reference for suggestions overlay positioning
+  searchSuggestions.setInputContainerReference(inputContainer);
 
   // AGENT: Main container - root layout with flexbox row (leftPane | content)
   const mainContainer = new BoxRenderable(renderer, {

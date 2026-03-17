@@ -819,6 +819,8 @@ Start by asking me something!`;
       if (targetMessage?.renderable) {
         // Get the Y position of the message and scroll to it
         scrollBox.scrollTop = targetMessage.renderable.y;
+        // Set this prompt as active (bold) in right sidebar
+        rightSideBar.setActivePrompt(index);
         notifications.show({ message: `Scrolled to message ${index}`, type: "info" });
       }
     },

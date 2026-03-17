@@ -170,6 +170,27 @@ export class RightSideBar {
     this._renderer.requestRender?.();
   }
 
+  /**
+   * Set the active prompt by index (makes it bold)
+   */
+  setActivePrompt(index: number): void {
+    // Remove bold from previously bold item
+    if (this._lastBoldItem) {
+      this._lastBoldItem.attributes = createTextAttributes({ bold: false });
+    }
+
+    // Find the item with matching message index
+    const itemIndex = this._messageIndices.indexOf(index);
+    if (itemIndex !== -1) {
+      const targetItem = this._messageItems[itemIndex];
+      if (targetItem) {
+        targetItem.attributes = createTextAttributes({ bold: true });
+        this._lastBoldItem = targetItem;
+        this._renderer.requestRender?.();
+      }
+    }
+  }
+
   private _updateVisibility(): void {
     const terminalWidth = (this._renderer as any).terminalWidth || 80;
     this._pane.visible = terminalWidth >= this._threshold;

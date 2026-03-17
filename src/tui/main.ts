@@ -52,6 +52,8 @@ interface Message {
   renderable: TextRenderable | MarkdownRenderable;
   isThinking?: boolean;
   thinkingContent?: string;
+  y?: number;       // Y position in container
+  height?: number;  // Message height
 }
 
 // ============================================================================
@@ -438,6 +440,30 @@ Start by asking me something!`;
   });
   historyContainer.add(welcomeMarkdown);
 
+  // Helper function to update active prompt based on scroll position
+  function updateActivePromptOnScroll() {
+    const viewportTop = scrollBox.scrollTop;
+    const viewportHeight = 20; // Approximate visible height
+    
+    // Find visible user message
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      if (!msg || msg.role !== "user") continue;
+      
+      const msgY = msg.renderable.y;
+      const msgHeight = msg.height || 1;
+      const msgBottom = msgY + msgHeight;
+      
+      // Check if message is in viewport
+      const isVisible = msgBottom > viewportTop && msgY < viewportTop + viewportHeight;
+      
+      if (isVisible) {
+        rightSideBar.setActivePrompt(i);
+        break;
+      }
+    }
+  }
+
   // AGENT: ScrollBox wraps history container - enables vertical scrolling for long chats
   const scrollBox = new ScrollBoxRenderable(renderer, {
     maxWidth: centeredWidth,
@@ -447,6 +473,11 @@ Start by asking me something!`;
   });
   scrollBox.stickyStart = "bottom";
   scrollBox.add(historyContainer);
+
+  // Track scroll changes via onMouseScroll
+  scrollBox.onMouseScroll = () => {
+    updateActivePromptOnScroll();
+  };
 
   // AGENT: Input container - box with border wrapping the text input
   const inputContainer = new BoxRenderable(renderer, {
@@ -702,10 +733,16 @@ Start by asking me something!`;
       ]);
 
       messageRow.add(messageText);
-      messageRow.add(hashText);
-      messageRow.add(timestamp);
       historyContainer.add(messageRow);
-      messages.push({ role, content, renderable: messageText });
+       
+      // Store spatial data for scroll tracking
+      const msgIndex = messages.length;
+      const newMessage = { role, content, renderable: messageText };
+      messages.push(newMessage);
+      // Note: y and height will be updated after render via onUpdate or scroll
+
+      // Update right sidebar with this message index
+      rightSideBar.addPrompt(content, msgIndex);
 
       renderer.requestRender?.();
       return messageText;

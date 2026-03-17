@@ -31,7 +31,7 @@ export class SearchSuggestionsOverlay extends BoxRenderable {
     super(renderer, {
       width: "100%",
       height: "auto",
-      flexDirection: "column",
+      flexDirection: "column-reverse",
       backgroundColor: COLORS.surface,
       border: true,
       borderStyle: "rounded",

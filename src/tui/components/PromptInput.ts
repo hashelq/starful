@@ -81,7 +81,7 @@ export class PromptInput {
       // Up arrow - previous
       if (key.name === "up") {
         this._isNavigating = true;
-        this._handleUpArrow(history);
+        this._handleDownArrow(history);
         this._isNavigating = false;
         return true;
       }
@@ -89,7 +89,7 @@ export class PromptInput {
       // Down arrow - next
       if (key.name === "down") {
         this._isNavigating = true;
-        this._handleDownArrow(history);
+        this._handleUpArrow(history);
         this._isNavigating = false;
         return true;
       }

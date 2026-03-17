@@ -274,6 +274,9 @@ async function main() {
       // Update inputContainer maxWidth
       inputContainer.maxWidth = newWidth;
       
+      // Update model display container maxWidth
+      modelDisplayContainer.maxWidth = newWidth;
+      
       // Update contentContainer alignItems
       contentContainer.alignItems = centered ? "center" : "stretch";
       
@@ -489,9 +492,9 @@ Start by asking me something!`;
     maxWidth: centeredWidth,
     paddingX: 2,
     paddingY: 1,
-    height: 4,
+    height: 3,
     backgroundColor: COLORS.surfaceAlt,
-    marginBottom: 1,
+    marginBottom: 0,
     overflow: "visible",
   });
 
@@ -808,19 +811,27 @@ Start by asking me something!`;
   // Add input to container (use the inner input renderable)
   inputContainer.add(promptInput.input);
 
-  // AGENT: Model display - shows current provider/model below input
-  const modelDisplay = new TextRenderable(renderer, {
-    content: `${provider}/${model}`,
-    fg: COLORS.accent,
-    attributes: createTextAttributes({ bold: true }),
-  });
-  inputContainer.add(modelDisplay);
-
   // Add search suggestions to inputContainer (allows overflow above)
   inputContainer.add(searchSuggestions);
 
   // Set input container reference for suggestions overlay positioning
   searchSuggestions.setInputContainerReference(inputContainer);
+
+  // AGENT: Model display container - shows current provider/model below input
+  const modelDisplayContainer = new BoxRenderable(renderer, {
+    width: "100%",
+    maxWidth: centeredWidth,
+    paddingX: 2,
+    paddingY: 0,
+    height: 1,
+  });
+  
+  const modelDisplay = new TextRenderable(renderer, {
+    content: `${provider}/${model}`,
+    fg: COLORS.accent,
+    attributes: createTextAttributes({ bold: true }),
+  });
+  modelDisplayContainer.add(modelDisplay);
 
   // AGENT: Main container - root layout with flexbox row (leftPane | content)
   const mainContainer = new BoxRenderable(renderer, {
@@ -870,9 +881,10 @@ Start by asking me something!`;
     },
   });
 
-  // Add all children to content container in order: figlet -> title -> scroll/history -> input
+  // Add all children to content container in order: scroll -> input -> model display
   contentContainer.add(scrollBox);
   contentContainer.add(inputContainer);
+  contentContainer.add(modelDisplayContainer);
 
   // Add left pane, content, and right pane to main container
   mainContainer.add(sideBar.renderable);

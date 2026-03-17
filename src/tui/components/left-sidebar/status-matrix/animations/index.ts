@@ -31,7 +31,7 @@ export { OceanAnimation } from "./ocean.js";
 export { ForestAnimation } from "./forest.js";
 export { FirefliesAnimation } from "./fireflies.js";
 export { RippleAnimation } from "./ripple.js";
-export { WavegrassAnimation } from "./wavegrass.js";
+export { ObjectsAnimation } from "./wavegrass.js";
 
 // Tech/Cyber animations
 export { MatrixAnimation } from "./matrix.js";

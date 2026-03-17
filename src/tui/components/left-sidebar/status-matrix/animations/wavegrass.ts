@@ -1,11 +1,11 @@
 import { Animation, type AnimationFrame, type AnimationConfig } from "./types.js";
 
 /**
- * Wavegrass animation - flowing plasma waves
+ * Objects animation - flowing plasma waves
  * A psychedelic wave pattern that morphs and pulses over time
  */
-export class WavegrassAnimation extends Animation {
-  name = "wavegrass";
+export class ObjectsAnimation extends Animation {
+  name = "objects";
 
   override get config(): AnimationConfig {
     return { speed: 0.15, colorScale: 1.2 };

@@ -24,17 +24,21 @@ export class RightSideBar {
   private _threshold: number;
   private _messageItems: TextRenderable[] = [];
   private _lastBoldItem: TextRenderable | null = null;
+  private _onPromptClick?: (index: number) => void;
+  private _messageIndices: number[] = []; // Map item index to message index
 
   constructor(
     renderer: CliRenderer,
     options?: {
       width?: number;
       threshold?: number;
+      onPromptClick?: (index: number) => void;
     }
   ) {
     this._renderer = renderer;
     this._width = options?.width ?? 30;
     this._threshold = options?.threshold ?? 100;
+    this._onPromptClick = options?.onPromptClick;
 
     // Create the right pane container
     this._pane = new BoxRenderable(renderer, {
@@ -125,7 +129,7 @@ export class RightSideBar {
   /**
    * Add a single prompt to the history display (no wrap, shows first line only)
    */
-  addPrompt(promptContent: string): void {
+  addPrompt(promptContent: string, messageIndex?: number): void {
     // Get first line only (no wrap)
     const firstLine = promptContent.split("\n")[0];
     const displayContent = firstLine;
@@ -140,7 +144,16 @@ export class RightSideBar {
       fg: COLORS.foreground,
       width: "100%",
       attributes: createTextAttributes({ bold: true }),
+      selectable: true,
     });
+
+    // Add click handler if callback provided
+    const itemIndex = this._messageItems.length;
+    if (this._onPromptClick) {
+      msgText.onMouseUp = () => {
+        this._onPromptClick?.(messageIndex ?? itemIndex);
+      };
+    }
 
     subscribeToThemeChanges([
       { renderable: msgText, prop: "fg", colorKey: "foreground" },
@@ -152,6 +165,7 @@ export class RightSideBar {
     // Add at the end (oldest at top, newest at bottom)
     this._contentContainer.add(msgText);
     this._messageItems.push(msgText);
+    this._messageIndices.push(messageIndex ?? itemIndex);
 
     this._renderer.requestRender?.();
   }

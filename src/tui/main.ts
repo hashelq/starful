@@ -748,8 +748,9 @@ Start by asking me something!`;
       // Add user message to history
       addStaticMessage("user", ` ${value}`);
 
-      // Add to right sidebar prompt list
-      rightSideBar.addPrompt(value);
+      // Add to right sidebar prompt list with message index
+      const messageIndex = messages.length - 1;
+      rightSideBar.addPrompt(value, messageIndex);
 
       // Build conversation history from existing messages
       const conversationHistory: Array<{
@@ -812,6 +813,15 @@ Start by asking me something!`;
   const rightSideBar = new RightSideBar(renderer, {
     width: 30,
     threshold: 128,
+    onPromptClick: (index: number) => {
+      // Scroll to the message in the main scrollBox
+      const targetMessage = messages[index];
+      if (targetMessage?.renderable) {
+        // Get the Y position of the message and scroll to it
+        scrollBox.scrollTop = targetMessage.renderable.y;
+        notifications.show({ message: `Scrolled to message ${index}`, type: "info" });
+      }
+    },
   });
 
   // Add all children to content container in order: figlet -> title -> scroll/history -> input

@@ -78,18 +78,18 @@ export class PromptInput {
         return false;
       }
       
-      // Up arrow - previous
+      // Up arrow - go to previous (older) history item
       if (key.name === "up") {
         this._isNavigating = true;
-        this._handleDownArrow(history);
+        this._handleHistoryPrevious(history);
         this._isNavigating = false;
         return true;
       }
       
-      // Down arrow - next
+      // Down arrow - go to next (newer) history item
       if (key.name === "down") {
         this._isNavigating = true;
-        this._handleUpArrow(history);
+        this._handleHistoryNext(history);
         this._isNavigating = false;
         return true;
       }
@@ -100,15 +100,15 @@ export class PromptInput {
     };
   }
   
-  private _handleUpArrow(history: ReturnType<typeof getPromptHistory>): void {
-    // If in cycling mode or empty input
+  private _handleHistoryPrevious(history: ReturnType<typeof getPromptHistory>): void {
+    // If in cycling mode or empty input, just cycle through history
     if (history.isCycling || this.input.value === "") {
       const prev = history.previous();
       if (prev) {
         this.input.value = prev;
       }
     } else if (history.isSearching) {
-      // Continue searching
+      // Continue searching - go to previous match
       history.searchPrevious();
       const result = history.getCurrentSearchResult();
       if (result) {
@@ -116,7 +116,7 @@ export class PromptInput {
       }
       this._searchSuggestions.selectPrevious();
     } else if (this.input.value) {
-      // Start search mode
+      // Start search mode with current input as prefix
       const result = history.startSearch(this.input.value);
       if (result) {
         this.input.value = result;
@@ -125,16 +125,18 @@ export class PromptInput {
     }
   }
   
-  private _handleDownArrow(history: ReturnType<typeof getPromptHistory>): void {
+  private _handleHistoryNext(history: ReturnType<typeof getPromptHistory>): void {
     if (history.isCycling) {
       const next = history.next();
       this.input.value = next;
     } else if (history.isSearching) {
+      // Go to next search match
       history.searchNext();
       const result = history.getCurrentSearchResult();
       this.input.value = result || "";
       this._searchSuggestions.selectNext();
     } else if (this.input.value) {
+      // Cycle through history
       const next = history.next();
       this.input.value = next;
     }

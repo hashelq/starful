@@ -2,10 +2,8 @@ import {
   createCliRenderer,
   BoxRenderable,
   TextRenderable,
-  ScrollBoxRenderable,
   MarkdownRenderable,
   TreeSitterClient,
-  ASCIIFontRenderable,
   parseKeypress,
   createTextAttributes,
 } from "@opentui/core";
@@ -20,7 +18,6 @@ import {
 } from "./utils/chat-helpers.js";
 import { NotificationsOverlay } from "./components/NotificationsOverlay.js";
 import { SearchSuggestionsOverlay } from "./components/SearchSuggestionsOverlay.js";
-import { PromptInput } from "./components/PromptInput.js";
 import {
   createPromptModal,
   type PromptModal,
@@ -30,11 +27,12 @@ import {
   registerDefaultLeftSidebarCategories,
 } from "./components/left-sidebar/LeftSideBar.js";
 import { RightSideBar } from "./components/right-sidebar/RightSideBar.js";
+import { ContentArea } from "./components/content-area/index.js";
 import {
   createCommandRegistry,
   type CommandRegistry,
 } from "../engine/commands/index.js";
-import { COLORS, initColors, getDefaultSyntaxStyle } from "../engine/colors.js";
+import { COLORS, initColors } from "../engine/colors.js";
 import { getTheme as getThemeFromConfig, isCentered, getCenteredWidth } from "../engine/ui-config.js";
 import { subscribeToThemeChanges } from "../engine/theme.js";
 import { TUIState } from "./state.js";
@@ -151,7 +149,7 @@ async function main() {
             return true; // Stop propagation
           }
           // For Ctrl+C only: If not generating and input is empty, exit
-          if (key.ctrl && key.name === "c" && !promptInput.input.value.trim()) {
+          if (key.ctrl && key.name === "c" && !contentArea.inputArea.promptInput.input.value.trim()) {
             return false; // Let it propagate to exit
           }
           // Consume to prevent exit when input has content
@@ -176,7 +174,7 @@ async function main() {
         if (TUIState.currentInputFocused) {
           TUIState.currentInputFocused.focus();
         } else {
-          promptInput.focus();
+          contentArea.focusInput();
         }
         return false;
       },
@@ -243,7 +241,7 @@ async function main() {
       },
 
       focusInput: () => {
-        promptInput.focus();
+        contentArea.focusInput();
       },
 
       toggleConsole: () => {
@@ -269,16 +267,16 @@ async function main() {
       const newWidth: number | "100%" = centered ? getCenteredWidth() : "100%";
       
       // Update scrollBox maxWidth
-      scrollBox.maxWidth = newWidth;
+      contentArea.scrollBox.maxWidth = newWidth;
       
       // Update inputContainer maxWidth
-      inputContainer.maxWidth = newWidth;
+      contentArea.inputArea.container.maxWidth = newWidth;
       
       // Update model display container maxWidth
-      modelDisplayContainer.maxWidth = newWidth;
+      contentArea.inputArea.modelDisplayContainer.maxWidth = newWidth;
       
       // Update contentContainer alignItems
-      contentContainer.alignItems = centered ? "center" : "stretch";
+      contentArea.container.alignItems = centered ? "center" : "stretch";
       
       // Request render to update the UI
       renderer.requestRender?.();
@@ -298,7 +296,7 @@ async function main() {
       );
       
       // Update model display
-      modelDisplay.content = `${provider}/${model}`;
+      contentArea.setModelDisplay(provider, model);
       
       notifications.show({ message: `Model changed to: ${model}`, type: "info" });
     };
@@ -326,7 +324,7 @@ async function main() {
         registry,
       },
       onClose: () => {
-        promptInput.focus();
+        contentArea.focusInput();
       },
       onSelect: (commandId) => {
         const cmd = registry.get(commandId);
@@ -375,82 +373,15 @@ async function main() {
     };
   }
 
-  // AGENT: History container - holds all chat messages in a column layout
-  // In centered mode, limit width for better readability
+  // AGENT: Content Area - Contains banner, welcome, chat history, input, model display
   const isCenteredMode = isCentered();
   const centeredWidth: number | "100%" = isCenteredMode ? getCenteredWidth() : "100%";
-  const historyContainer = new BoxRenderable(renderer, {
-    width: "100%",
-    height: "auto",
-    flexDirection: "column",
-    paddingX: 2,
-    gap: 1,
-  });
-
-  // AGENT: Banner container - centers the brand and subtitle
-  const bannerContainer = new BoxRenderable(renderer, {
-    width: "100%",
-    height: "auto",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 0,
-  });
-
-  // AGENT: Figlet ASCII art banner - added to history so it scrolls with chat
-  const figletBanner = new ASCIIFontRenderable(renderer, {
-    text: "STARFUL",
-    font: "block",
-    color: COLORS.dimText,
-  });
-
-  // AGENT: Title banner - added to history so it scrolls with chat
-  const titleText = new TextRenderable(renderer, {
-    content: "TIP: you can /revert last changes",
-    fg: COLORS.dimText,
-  });
-
-  // Add to banner container (centered)
-  bannerContainer.add(figletBanner);
-  bannerContainer.add(titleText);
-
-  // Add to history container so they scroll with messages
-  historyContainer.add(bannerContainer);
-
-  // Add welcome message as markdown
-  const welcomeMessage = `## Welcome to Starful
-
-Your AI-powered terminal IDE. Here's what you can do:
-
-### Quick Commands
-- \`/theme\` - Switch color themes
-- \`/model\` - Change AI model  
-- \`/clear\` - Clear chat history
-
-### AI Capabilities
-- **File operations**: Read, write, edit files
-- **Shell commands**: Run terminal commands
-- **Code assistance**: Ask coding questions
-
-> **Tip**: Press \`Ctrl+P\` to open the command palette
-
-Start by asking me something!`;
-
-  const welcomeMarkdown = new MarkdownRenderable(renderer, {
-    width: "100%",
-    height: "auto",
-    content: welcomeMessage,
-    syntaxStyle: getDefaultSyntaxStyle(),
-    conceal: true,
-    treeSitterClient,
-  });
-  historyContainer.add(welcomeMarkdown);
 
   // Helper function to update active prompt based on scroll position
   function updateActivePromptOnScroll() {
-    const viewportTop = scrollBox.scrollTop;
+    const viewportTop = contentArea.scrollBox.scrollTop;
     const viewportHeight = 20; // Approximate visible height
-    
+     
     // Find visible user message
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
@@ -470,35 +401,33 @@ Start by asking me something!`;
     }
   }
 
-  // AGENT: ScrollBox wraps history container - enables vertical scrolling for long chats
-  const scrollBox = new ScrollBoxRenderable(renderer, {
-    maxWidth: centeredWidth,
-    flexGrow: 1,
-    scrollY: true,
-    stickyScroll: true,
-    stickyStart: "bottom",
-    viewportCulling: true, // Only render visible items for performance
+  // Create ContentArea - combines banner, welcome, chat history, input, and model display
+  const contentArea = new ContentArea(renderer, searchSuggestions, {
+    centeredWidth,
+    provider: provider,
+    model: model,
+    treeSitterClient,
+    isGenerating: () => appState.isGenerating,
+    onExit: () => cleanup(),
+    onSubmit: async (value: string) => {
+      // Add user message to history (includes adding to right sidebar)
+      addStaticMessage("user", ` ${value}`);
+
+      // Build conversation history from existing messages
+      const conversationHistory: Array<{
+        role: "user" | "assistant";
+        content: string;
+      }> = messages
+        .filter((m) => m.role === "user" || m.role === "assistant")
+        .map((m) => ({ role: m.role, content: m.content }));
+
+      // Stream the Ollama response
+      await streamOllamaResponse(value, conversationHistory);
+    },
+    onScroll: updateActivePromptOnScroll,
   });
-  scrollBox.add(historyContainer);
-
-  // Track scroll changes via onMouseScroll
-  scrollBox.onMouseScroll = () => {
-    updateActivePromptOnScroll();
-  };
-
-  // AGENT: Input container - box with border wrapping the text input
-  const inputContainer = new BoxRenderable(renderer, {
-    width: "100%",
-    maxWidth: centeredWidth,
-    paddingX: 2,
-    paddingY: 1,
-    height: 3,
-    backgroundColor: COLORS.surfaceAlt,
-    marginBottom: 0,
-    overflow: "visible",
-  });
-
-  // AGENT: Streams LLM response from Ollama - handles both thinking and content phases
+    
+    // AGENT: Streams LLM response from Ollama - handles both thinking and content phases
   async function streamOllamaResponse(
     prompt: string,
     conversationHistory: Array<{ role: "user" | "assistant"; content: string }>,
@@ -562,7 +491,7 @@ Start by asking me something!`;
             thinkingStarted = true;
             streamingThinkingElement = createThinkingElement(
               renderer,
-              historyContainer,
+              contentArea.chatHistory.container,
             );
           }
           thinking += chunk.message.thinking;
@@ -583,7 +512,7 @@ Start by asking me something!`;
               treeSitterClient,
             );
 
-            historyContainer.add(streamingMarkdownContent);
+            contentArea.addToHistory(streamingMarkdownContent);
 
             if (thinkingStarted) {
               // Continuation after thinking
@@ -601,14 +530,14 @@ Start by asking me something!`;
 
               // Create CodeBlock component
               codeBlock = new CodeBlock(renderer, treeSitterClient, () =>
-                promptInput.focus(),
+                contentArea.focusInput(),
               );
               const codeBlockDecorated = new BoxRenderable(renderer, {
                 border: true,
                 borderColor: COLORS.foreground,
               });
               codeBlockDecorated.add(codeBlock.renderable);
-              historyContainer.add(codeBlockDecorated);
+              contentArea.addToHistory(codeBlockDecorated);
 
               streamingMarkdownContent = codeBlock.expandedMarkdown;
               streamingMarkdownContent2Fold = codeBlock.foldedMarkdown;
@@ -625,7 +554,7 @@ Start by asking me something!`;
               );
               streamingMarkdownContent2Fold = null;
 
-              historyContainer.add(streamingMarkdownContent);
+              contentArea.addToHistory(streamingMarkdownContent);
             }
 
             inCode = !inCode;
@@ -658,7 +587,7 @@ Start by asking me something!`;
         if (hadContent || hadThinking) {
           const cancelMsg = createErrorMessage(renderer, "[Cancelled]");
           cancelMsg.fg = COLORS.textMuted; // Make it look like a muted message
-          historyContainer.add(cancelMsg);
+          contentArea.addToHistory(cancelMsg);
         }
         // If nothing started yet, just silently cancel
       } else {
@@ -673,7 +602,7 @@ Start by asking me something!`;
         }
         
         const errorMsg = createErrorMessage(renderer, `Error: ${errorMessage}`);
-        historyContainer.add(errorMsg);
+        contentArea.addToHistory(errorMsg);
       }
     } finally {
       appState.isGenerating = false;
@@ -740,7 +669,7 @@ Start by asking me something!`;
       ]);
 
       messageRow.add(messageText);
-      historyContainer.add(messageRow);
+      contentArea.addToHistory(messageRow);
        
       // Store spatial data for scroll tracking
       const msgIndex = messages.length;
@@ -772,7 +701,7 @@ Start by asking me something!`;
       ]);
 
       messageContainer.add(messageText);
-      historyContainer.add(messageContainer);
+      contentArea.addToHistory(messageContainer);
       messages.push({ role, content, renderable: messageText });
 
       // Update right sidebar history
@@ -784,54 +713,11 @@ Start by asking me something!`;
     }
   }
 
-  // AGENT: Input field - using PromptInput component with history navigation
-  const promptInput = new PromptInput(renderer, searchSuggestions, {
-    isGenerating: () => appState.isGenerating,
-    onExit: () => cleanup(),
-    onSubmit: async (value: string) => {
-      // Add user message to history (includes adding to right sidebar)
-      addStaticMessage("user", ` ${value}`);
-
-      // Build conversation history from existing messages
-      const conversationHistory: Array<{
-        role: "user" | "assistant";
-        content: string;
-      }> = messages
-        .filter((m) => m.role === "user" || m.role === "assistant")
-        .map((m) => ({ role: m.role, content: m.content }));
-
-      // Stream the Ollama response
-      await streamOllamaResponse(value, conversationHistory);
-    },
-  });
-
   // Focus the input
-  promptInput.focus();
-
-  // Add input to container (use the inner input renderable)
-  inputContainer.add(promptInput.input);
-
-  // Add search suggestions to inputContainer (allows overflow above)
-  inputContainer.add(searchSuggestions);
+  contentArea.focusInput();
 
   // Set input container reference for suggestions overlay positioning
-  searchSuggestions.setInputContainerReference(inputContainer);
-
-  // AGENT: Model display container - shows current provider/model below input
-  const modelDisplayContainer = new BoxRenderable(renderer, {
-    width: "100%",
-    maxWidth: centeredWidth,
-    paddingX: 2,
-    paddingY: 0,
-    height: 1,
-  });
-  
-  const modelDisplay = new TextRenderable(renderer, {
-    content: `${provider}/${model}`,
-    fg: COLORS.accent,
-    attributes: createTextAttributes({ bold: true }),
-  });
-  modelDisplayContainer.add(modelDisplay);
+  searchSuggestions.setInputContainerReference(contentArea.inputArea.container);
 
   // AGENT: Main container - root layout with flexbox row (leftPane | content)
   const mainContainer = new BoxRenderable(renderer, {
@@ -855,16 +741,6 @@ Start by asking me something!`;
     isGeneratingFn: () => appState.isGenerating,
   });
 
-  // Content container for the column layout (figlet, scrollbox, input)
-  const contentContainer = new BoxRenderable(renderer, {
-    width: "100%",
-    height: "100%",
-    flexDirection: "column",
-    padding: 1,
-    gap: 1,
-    alignItems: isCenteredMode ? "center" : "stretch",
-  });
-
   // Right sidebar - shows file explorer, git status, etc.
   const rightSideBar = new RightSideBar(renderer, {
     width: 30,
@@ -874,21 +750,16 @@ Start by asking me something!`;
       const targetMessage = messages[index];
       if (targetMessage?.renderable) {
         // Get the Y position of the message and scroll to it
-        scrollBox.scrollTop = targetMessage.renderable.y;
+        contentArea.scrollBox.scrollTop = targetMessage.renderable.y;
         // Set this prompt as active (bold) in right sidebar
         rightSideBar.setActivePrompt(index);
       }
     },
   });
 
-  // Add all children to content container in order: scroll -> input -> model display
-  contentContainer.add(scrollBox);
-  contentContainer.add(inputContainer);
-  contentContainer.add(modelDisplayContainer);
-
-  // Add left pane, content, and right pane to main container
+  // Add content area and sidebars to main container
   mainContainer.add(sideBar.renderable);
-  mainContainer.add(contentContainer);
+  mainContainer.add(contentArea.container);
   mainContainer.add(rightSideBar.renderable);
 
   // AGENT: Mount main container to renderer's root (root is readonly, use .add())
@@ -907,26 +778,26 @@ Start by asking me something!`;
     },
     // Input container background
     {
-      renderable: inputContainer,
+      renderable: contentArea.inputArea.container,
       prop: "backgroundColor",
       colorKey: "surfaceAlt",
     },
     // Input colors - no background when typing
-    { renderable: promptInput.input, prop: "textColor", colorKey: "inputText" },
+    { renderable: contentArea.inputArea.promptInput.input, prop: "textColor", colorKey: "inputText" },
     {
-      renderable: promptInput.input,
+      renderable: contentArea.inputArea.promptInput.input,
       prop: "placeholderColor",
       colorKey: "placeholderText",
     },
     // Figlet banner
-    { renderable: figletBanner, prop: "color", colorKey: "dimText" },
+    { renderable: contentArea.banner.figletBanner, prop: "color", colorKey: "dimText" },
     // Title text
-    { renderable: titleText, prop: "fg", colorKey: "dimText" },
+    { renderable: contentArea.banner.titleText, prop: "fg", colorKey: "dimText" },
     // Model display
-    { renderable: modelDisplay, prop: "fg", colorKey: "accent" },
+    { renderable: contentArea.inputArea.modelDisplay, prop: "fg", colorKey: "accent" },
     // History container (if has background)
     {
-      renderable: historyContainer,
+      renderable: contentArea.chatHistory.container,
       prop: "backgroundColor",
       colorKey: "background",
     },

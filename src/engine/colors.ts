@@ -149,9 +149,9 @@ function buildPalette(theme: Theme): ColorPalette {
     primary: synthesizeGray(c.background, 0.35),
     secondary: c.base0e,
     accent: c.base0c,
-    success: c.base0b,
+    success: c.base02,
     warning: c.base09,
-    error: c.base08,
+    error: c.base01,
 
     // UI Elements
     border: synthesizeGray(c.background, 0.1),

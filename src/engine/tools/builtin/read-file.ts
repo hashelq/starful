@@ -40,8 +40,6 @@ export const readFileTool: ToolDefinition = {
  */
 export async function readFileHandler(args: Record<string, unknown>): Promise<string> {
   const path = args.path as string;
-  const maxLines = (args.maxLines as number) ?? 100;
-  const offset = (args.offset as number) ?? 0;
 
   if (!path) {
     return "Error: path is required";
@@ -53,24 +51,11 @@ export async function readFileHandler(args: Record<string, unknown>): Promise<st
     
     const content = readFileSync(absolutePath, "utf-8");
     const lines = content.split("\n");
-
-    // Handle offset
-    const startLine = Math.min(offset, lines.length);
-    const selectedLines = lines.slice(startLine);
-    
-    // Handle maxLines (0 = unlimited)
-    const displayLines = maxLines > 0 ? selectedLines.slice(0, maxLines) : selectedLines;
-    
-    const result = displayLines.join("\n");
     const totalLines = lines.length;
-    const showing = displayLines.length;
-    const suffix = maxLines > 0 && showing < selectedLines.length 
-      ? `\n\n... (showing ${showing}/${totalLines} lines, use maxLines to increase)` 
-      : maxLines === 0 && totalLines > displayLines.length
-      ? `\n\n... (${totalLines} total lines)`
-      : "";
 
-    return `File: ${absolutePath}\n\`\`\`\n${result}\n\`\`\`${suffix}`;
+    // Return short summary for UI display
+    // Full content is NOT returned - LLM gets it via tool result format
+    return `Read ${absolutePath} (${totalLines} lines)`;
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes("ENOENT")) {

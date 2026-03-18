@@ -451,28 +451,29 @@ async function main() {
     
   /**
    * Create a visual structure for a tool call execution
+   * displayOutput: optional output to show in UI (omit for tools like read_file)
    */
   function createToolCallUI(
     toolName: string,
     args: Record<string, unknown>,
     status: "executing" | "success" | "error",
-    output?: string,
+    displayOutput?: string,
   ): BoxRenderable {
     const container = new BoxRenderable(renderer, {
-      width: "100%",
+      width: "auto",
       flexDirection: "column",
       gap: 0,
-      padding: 1,
-      border: true,
-      borderColor: status === "executing" ? COLORS.warning : status === "success" ? COLORS.success : COLORS.error,
+      padding: 1
     });
 
-    // Header with tool name and status
-    const statusIcon = status === "executing" ? "🔧" : status === "success" ? "✅" : "❌";
+    // Status text - no icons, just "successful" or "error"
+    const statusText = status === "success" ? "successful" : status === "error" ? "error" : "";
     const statusColor = status === "executing" ? COLORS.warning : status === "success" ? COLORS.success : COLORS.error;
     
+    // Header with tool name and status
+    const headerContent = status ? `${toolName} (${statusText})` : toolName;
     const header = new TextRenderable(renderer, {
-      content: `${statusIcon} ${toolName}`,
+      content: headerContent,
       fg: statusColor,
       attributes: createTextAttributes({ bold: true }),
     });
@@ -481,18 +482,18 @@ async function main() {
     // Arguments (if executing)
     if (status === "executing") {
       const argsText = new TextRenderable(renderer, {
-        content: `   Args: ${JSON.stringify(args, null, 2)}`,
+        content: `   ${JSON.stringify(args, null, 2)}`,
         fg: COLORS.textDim,
       });
       container.add(argsText);
     }
 
-    // Output (if completed)
-    if (output && status !== "executing") {
+    // Display output (only if provided)
+    if (displayOutput && status !== "executing") {
       // Truncate long outputs for display
-      const displayOutput = output.length > 500 ? output.substring(0, 500) + "\n... (truncated)" : output;
+      const truncated = displayOutput.length > 500 ? displayOutput.substring(0, 500) + "\n... (truncated)" : displayOutput;
       const outputText = new TextRenderable(renderer, {
-        content: `   ${displayOutput}`,
+        content: `   ${truncated}`,
         fg: status === "error" ? COLORS.error : COLORS.text,
       });
       container.add(outputText);
@@ -623,12 +624,15 @@ async function main() {
             toolUI.remove(toolUI.id); // Remove old UI
             contentArea.chatHistory.container.remove(toolUI.id);
             
-            // Add completed UI
+            // Add completed UI with output
+            const toolName = toolCall.function?.name || "unknown";
+            // Check both result.error and result.output starting with "Error:"
+            const isError = result.error || (result.output && result.output.startsWith("Error:"));
             const completedUI = createToolCallUI(
-              toolCall.function?.name || "unknown",
+              toolName,
               args,
-              result.error ? "error" : "success",
-              result.error || result.output,
+              isError ? "error" : "success",
+              isError ? (result.error || result.output) : result.output,
             );
             contentArea.addToHistory(completedUI);
             renderer.requestRender?.();

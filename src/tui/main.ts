@@ -40,6 +40,8 @@ import { loadConfig, parseDefaultModel, getProviderConfig } from "../engine/conf
 import { Engine } from "../engine/Engine.js";
 import { copyToClipboard } from "./clipboard.js";
 import type { UIImplementation } from "../engine/ui.js";
+import { registerBuiltinTools, toolRegistry, formatToolResults, type ToolResult } from "../engine/tools/index.js";
+import type { ModelTool } from "../engine/llm/types/api-types.js";
 
 // ============================================================================
 // Types
@@ -135,6 +137,10 @@ async function main() {
     systemPrompt: "You are a helpful AI assistant integrated into Starful, an AI-powered terminal IDE. You can help with coding tasks, explaining concepts, answering questions, and more. Provide detailed, accurate responses.",
   });
   console.log(`[main] Engine created`);
+
+  // Register built-in tools for LLM function calling
+  registerBuiltinTools();
+  console.log(`[main] Registered ${toolRegistry.size} tools for function calling`);
 
   // Create CLI renderer with keyboard shortcuts
   const renderer = await createCliRenderer({
@@ -443,7 +449,59 @@ async function main() {
     onScroll: updateActivePromptOnScroll,
   });
     
-    // AGENT: Streams LLM response from Ollama - handles both thinking and content phases
+  /**
+   * Create a visual structure for a tool call execution
+   */
+  function createToolCallUI(
+    toolName: string,
+    args: Record<string, unknown>,
+    status: "executing" | "success" | "error",
+    output?: string,
+  ): BoxRenderable {
+    const container = new BoxRenderable(renderer, {
+      width: "100%",
+      flexDirection: "column",
+      gap: 0,
+      padding: 1,
+      border: true,
+      borderColor: status === "executing" ? COLORS.warning : status === "success" ? COLORS.success : COLORS.error,
+    });
+
+    // Header with tool name and status
+    const statusIcon = status === "executing" ? "🔧" : status === "success" ? "✅" : "❌";
+    const statusColor = status === "executing" ? COLORS.warning : status === "success" ? COLORS.success : COLORS.error;
+    
+    const header = new TextRenderable(renderer, {
+      content: `${statusIcon} ${toolName}`,
+      fg: statusColor,
+      attributes: createTextAttributes({ bold: true }),
+    });
+    container.add(header);
+
+    // Arguments (if executing)
+    if (status === "executing") {
+      const argsText = new TextRenderable(renderer, {
+        content: `   Args: ${JSON.stringify(args, null, 2)}`,
+        fg: COLORS.textDim,
+      });
+      container.add(argsText);
+    }
+
+    // Output (if completed)
+    if (output && status !== "executing") {
+      // Truncate long outputs for display
+      const displayOutput = output.length > 500 ? output.substring(0, 500) + "\n... (truncated)" : output;
+      const outputText = new TextRenderable(renderer, {
+        content: `   ${displayOutput}`,
+        fg: status === "error" ? COLORS.error : COLORS.text,
+      });
+      container.add(outputText);
+    }
+
+    return container;
+  }
+
+  // AGENT: Streams LLM response from Ollama - handles both thinking and content phases
   async function streamOllamaResponse(
     prompt: string,
     conversationHistory: Array<{ role: "user" | "assistant"; content: string }>,
@@ -485,10 +543,15 @@ async function main() {
       // Create AbortController for cancelling the stream
       currentAbortController = new AbortController();
 
+      // Get tools from registry if any are registered (cast to ModelTool for LLM provider)
+      const tools = toolRegistry.size > 0 
+        ? toolRegistry.getAllDefinitions() as unknown as ModelTool[] 
+        : undefined;
+
       const chatStream = await llmProvider.chat(
         model,
         messagesForOllama,
-        undefined,
+        tools,
         currentAbortController.signal,
       );
       let inCode: boolean = false;
@@ -505,6 +568,165 @@ async function main() {
 
       // Stream the response
       for await (const chunk of chatStream) {
+        // AGENT: Handle tool calls from LLM
+        const toolCalls = chunk.message.tool_calls as any[] | undefined;
+        if (toolCalls && toolCalls.length > 0) {
+          console.log(`[Tool] Received ${toolCalls.length} tool call(s)`);
+
+          // Finalize thinking element if it exists (this ends the "before tool" message)
+          if (thinkingStarted && streamingThinkingElement) {
+            console.log(`[Tool] Finalized thinking before tool: "${thinking.substring(0, 50)}..."`);
+            streamingThinkingElement = undefined;
+          }
+
+          // Finalize current content as a separate message (before tool call)
+          if (contentStarted && content.trim()) {
+            console.log(`[Tool] Finalized content before tool: "${content.substring(0, 50)}..."`);
+          }
+
+          // Reset ALL state for the continuation message (after tool)
+          thinkingStarted = false;
+          thinking = "";
+          contentStarted = false;
+          content = "";
+
+          // Execute all tool calls and show UI for each
+          const results: ToolResult[] = [];
+          for (const toolCall of toolCalls) {
+            // Parse arguments
+            let args: Record<string, unknown> = {};
+            try {
+              if (typeof toolCall.function?.arguments === "string") {
+                args = JSON.parse(toolCall.function.arguments);
+              } else if (typeof toolCall.function?.arguments === "object") {
+                args = toolCall.function.arguments;
+              }
+            } catch {
+              console.log(`[Tool] Failed to parse arguments:`, toolCall.function?.arguments);
+            }
+
+            // Show executing state
+            const toolUI = createToolCallUI(
+              toolCall.function?.name || "unknown",
+              args,
+              "executing",
+            );
+            contentArea.addToHistory(toolUI);
+            renderer.requestRender?.();
+
+            // Execute tool
+            console.log(`[Tool] Executing: ${toolCall.function?.name}`);
+            const result = await toolRegistry.executeToolCall(toolCall);
+            results.push(result);
+
+            // Update UI to show result
+            toolUI.remove(toolUI.id); // Remove old UI
+            contentArea.chatHistory.container.remove(toolUI.id);
+            
+            // Add completed UI
+            const completedUI = createToolCallUI(
+              toolCall.function?.name || "unknown",
+              args,
+              result.error ? "error" : "success",
+              result.error || result.output,
+            );
+            contentArea.addToHistory(completedUI);
+            renderer.requestRender?.();
+
+            console.log(`[Tool] Result for ${toolCall.function?.name}:`, result.output.substring(0, 100) + "...");
+          }
+
+          // Format results for continuation
+          const toolResults = formatToolResults(results);
+
+          // Add tool results and continue conversation
+          const continuationMessages = [
+            ...messagesForOllama,
+            ...toolResults.map(r => ({
+              role: "tool" as const,
+              content: r.content,
+              tool_call_id: r.tool_call_id,
+            })),
+          ];
+
+          // Continue streaming with tool results
+          const continuationStream = await llmProvider.chat(
+            model,
+            continuationMessages,
+            tools,
+            currentAbortController.signal,
+          );
+
+          // Consume continuation stream - this will create a NEW message after tool results
+          for await (const contChunk of continuationStream) {
+            // Process continuation chunk normally
+            if (contChunk.message.thinking) {
+              if (!thinkingStarted) {
+                thinkingStarted = true;
+                streamingThinkingElement = createThinkingElement(
+                  renderer,
+                  contentArea.chatHistory.container,
+                );
+              }
+              thinking += contChunk.message.thinking;
+              streamingThinkingElement!.content = getFormattedResponse(
+                thinking,
+                "thinking",
+              );
+              renderer.requestRender?.();
+            }
+            if (contChunk.message.content) {
+              if (!contentStarted) {
+                contentStarted = true;
+                streamingMarkdownContent = createMarkdownRenderable(
+                  renderer,
+                  treeSitterClient,
+                );
+                contentArea.addToHistory(streamingMarkdownContent);
+              }
+              content += contChunk.message.content;
+              const codeTagIndex = findCodeBlockDelimiter(content);
+              if (codeTagIndex !== -1) {
+                writeMarkDown(content.substring(0, codeTagIndex));
+                if (!inCode) {
+                  content = content.substring(codeTagIndex + 3);
+                  codeBlock = new CodeBlock(renderer, treeSitterClient, () =>
+                    contentArea.focusInput(),
+                  );
+                  const codeBlockDecorated = new BoxRenderable(renderer, {
+                    border: true,
+                    borderColor: COLORS.foreground,
+                  });
+                  codeBlockDecorated.add(codeBlock.renderable);
+                  contentArea.addToHistory(codeBlockDecorated);
+                  streamingMarkdownContent = codeBlock.expandedMarkdown;
+                  streamingMarkdownContent2Fold = codeBlock.foldedMarkdown;
+                  languageLabel = codeBlock.languageLabel;
+                } else {
+                  content = content.substring(codeTagIndex + 3);
+                  if (codeBlock) codeBlock.finalize();
+                  streamingMarkdownContent = createMarkdownRenderable(
+                    renderer,
+                    treeSitterClient,
+                  );
+                  streamingMarkdownContent2Fold = null;
+                  contentArea.addToHistory(streamingMarkdownContent);
+                }
+                inCode = !inCode;
+              }
+              if (inCode && codeLang === "" && languageLabel) {
+                let n = content.lastIndexOf("\n");
+                if (n !== -1) {
+                  codeLang = content.substring(0, n + 1);
+                  languageLabel.content = codeLang;
+                }
+              }
+              writeMarkDown(content);
+            }
+          }
+          break; // Exit outer loop after handling tool calls
+        }
+
         // Handle thinking phase
         if (chunk.message.thinking) {
           if (!thinkingStarted) {
@@ -519,7 +741,7 @@ async function main() {
             thinking,
             "thinking",
           );
-          renderer.requestRender();
+          renderer.requestRender?.();
         }
         // Handle content phase
         if (chunk.message.content) {

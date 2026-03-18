@@ -50,6 +50,9 @@ export class InputArea {
       onSubmit: options.onSubmit ?? (async () => {}),
     });
 
+    // Add search suggestions overlay to container (for absolute positioning)
+    this.container.add(searchSuggestions);
+
     // Add input to container
     this.container.add(this.promptInput.input);
 

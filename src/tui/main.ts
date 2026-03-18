@@ -358,15 +358,9 @@ async function main() {
       selectionStart.y = event.y;
     };
 
-    renderer.root.onMouseUp = async (event) => {
-      // Check if there was actual mouse movement (selection)
-      const hasMoved = selectionStart.x !== -1 && (
-        Math.abs(event.x - selectionStart.x) > 1 || 
-        Math.abs(event.y - selectionStart.y) > 1
-      );
-      
-      if (!hasMoved) {
-        selectionStart.x = -1;
+    renderer.root.onMouseUp = async (_event) => {
+      // Check if there was any mouse down event
+      if (selectionStart.x === -1) {
         return;
       }
       
@@ -451,52 +445,47 @@ async function main() {
     
   /**
    * Create a visual structure for a tool call execution
-   * displayOutput: optional output to show in UI (omit for tools like read_file)
    */
   function createToolCallUI(
     toolName: string,
     args: Record<string, unknown>,
     status: "executing" | "success" | "error",
-    displayOutput?: string,
+    structuredOutput?: { message: string; content: string },
   ): BoxRenderable {
     const container = new BoxRenderable(renderer, {
       width: "auto",
       flexDirection: "column",
-      gap: 0,
+      gap: 1,
       padding: 1
     });
 
-    // Status text - no icons, just "successful" or "error"
-    const statusText = status === "success" ? "successful" : status === "error" ? "error" : "";
+    // Colors based on status
     const statusColor = status === "executing" ? COLORS.warning : status === "success" ? COLORS.success : COLORS.error;
-    
-    // Header with tool name and status
-    const headerContent = status ? `${toolName} (${statusText})` : toolName;
+
+    // Header: toolName (status)
+    const statusText = status === "success" ? "successful" : status === "error" ? "error" : "";
     const header = new TextRenderable(renderer, {
-      content: headerContent,
+      content: status ? `${toolName} (${statusText})` : toolName,
       fg: statusColor,
       attributes: createTextAttributes({ bold: true }),
     });
     container.add(header);
 
-    // Arguments (if executing)
+    // Show args during execution
     if (status === "executing") {
       const argsText = new TextRenderable(renderer, {
         content: `   ${JSON.stringify(args, null, 2)}`,
         fg: COLORS.textDim,
       });
       container.add(argsText);
-    }
-
-    // Display output (only if provided)
-    if (displayOutput && status !== "executing") {
-      // Truncate long outputs for display
-      const truncated = displayOutput.length > 500 ? displayOutput.substring(0, 500) + "\n... (truncated)" : displayOutput;
-      const outputText = new TextRenderable(renderer, {
-        content: `   ${truncated}`,
-        fg: status === "error" ? COLORS.error : COLORS.text,
+    } else if (structuredOutput) {
+      // Show message for UI (already formatted by tool)
+      const messageColor = status === "error" ? COLORS.error : COLORS.text;
+      const message = new TextRenderable(renderer, {
+        content: `   ${structuredOutput.message}`,
+        fg: messageColor,
       });
-      container.add(outputText);
+      container.add(message);
     }
 
     return container;
@@ -624,15 +613,14 @@ async function main() {
             toolUI.remove(toolUI.id); // Remove old UI
             contentArea.chatHistory.container.remove(toolUI.id);
             
-            // Add completed UI with output
+            // Add completed UI with structured output
             const toolName = toolCall.function?.name || "unknown";
-            // Check both result.error and result.output starting with "Error:"
-            const isError = result.error || (result.output && result.output.startsWith("Error:"));
+            const isError = result.structuredOutput?.message.startsWith("Error:");
             const completedUI = createToolCallUI(
               toolName,
               args,
               isError ? "error" : "success",
-              isError ? (result.error || result.output) : result.output,
+              result.structuredOutput,
             );
             contentArea.addToHistory(completedUI);
             renderer.requestRender?.();

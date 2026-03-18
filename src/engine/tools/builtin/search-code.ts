@@ -4,165 +4,128 @@
 
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { ToolDefinition } from "../types.js";
+import { BaseTool, type ParameterSchema } from "./base-tool.js";
+import type { ToolOutput } from "../types.js";
 
-/**
- * Search code tool definition
- */
-export const searchCodeTool: ToolDefinition = {
-  type: "function",
-  function: {
-    name: "search_code",
-    description: "Search for text patterns in files within a directory. Useful for finding code, configuration, or any text across your project.",
-    parameters: {
-      type: "object",
-      properties: {
-        pattern: {
-          type: "string",
-          description: "The text pattern to search for (supports basic regex)",
-        },
-        path: {
-          type: "string",
-          description: "Directory to search in (defaults to project root)",
-        },
-        filePattern: {
-          type: "string",
-          description: "File pattern to match (e.g., '*.ts', '*.js', '*')",
-        },
-        maxResults: {
-          type: "number",
-          description: "Maximum number of matches to return (default: 50)",
-        },
-        caseSensitive: {
-          type: "boolean",
-          description: "Whether to match case exactly (default: false)",
-        },
-      },
-      required: ["pattern"],
+export class SearchCodeTool extends BaseTool {
+  readonly name = "search_code";
+  readonly description = "Search for text patterns in files within a directory. Useful for finding code, configuration, or any text across your project.";
+
+  protected readonly parameters: ParameterSchema[] = [
+    {
+      name: "pattern",
+      type: "string",
+      description: "The text pattern to search for (supports basic regex)",
+      required: true,
     },
-  },
-};
+    {
+      name: "path",
+      type: "string",
+      description: "Directory to search in (defaults to project root)",
+      default: ".",
+    },
+    {
+      name: "filePattern",
+      type: "string",
+      description: "File pattern to match (e.g., '*.ts', '*.js', '*')",
+      default: "*",
+    },
+    {
+      name: "caseSensitive",
+      type: "boolean",
+      description: "Whether to match case exactly (default: false)",
+      default: false,
+    },
+  ];
 
-/**
- * Recursively get all files matching a pattern
- */
-function getFiles(dir: string, pattern: RegExp, files: string[] = []): string[] {
-  try {
-    const entries = readdirSync(dir, { withFileTypes: true });
-    
-    for (const entry of entries) {
-      const fullPath = resolve(dir, entry.name);
+  async execute(args: Record<string, unknown>): Promise<ToolOutput> {
+    const pattern = this.requireParam<string>(args, "pattern");
+    const path = this.getParam(args, "path", ".");
+    const filePattern = this.getParam(args, "filePattern", "*");
+    const caseSensitive = this.getParam(args, "caseSensitive", false);
+
+    try {
+      const files = this.getFiles(path, filePattern);
       
-      // Skip node_modules, .git, etc.
-      if (entry.name.startsWith(".") || entry.name === "node_modules") {
-        continue;
+      if (files.length === 0) {
+        return {
+          message: `"${pattern}" (0 files)`,
+          content: `No files matching "${filePattern}" found in ${path}`,
+        };
       }
       
-      if (entry.isDirectory()) {
-        getFiles(fullPath, pattern, files);
-      } else if (entry.isFile() && pattern.test(entry.name)) {
-        files.push(fullPath);
+      const allMatches = this.searchFiles(files, pattern, caseSensitive);
+      
+      if (allMatches.length === 0) {
+        return {
+          message: `"${pattern}" (0 matches)`,
+          content: `No matches found for "${pattern}"`,
+        };
       }
+      
+      const results = allMatches.map(m => 
+        `${m.file}:${m.line}: ${m.content}`
+      ).join("\n");
+      
+      return {
+        message: `"${pattern}" (${allMatches.length} matches)`,
+        content: results,
+      };
+    } catch (error) {
+      return {
+        message: `Error searching`,
+        content: `Error: ${error instanceof Error ? error.message : String(error)}`,
+      };
     }
-  } catch {
-    // Skip directories we can't read
   }
-  
-  return files;
-}
 
-/**
- * Search for pattern in a file
- */
-function searchInFile(filePath: string, pattern: string, caseSensitive: boolean): { line: number; content: string }[] {
-  try {
-    const content = readFileSync(filePath, "utf-8");
-    const lines = content.split("\n");
-    const regex = new RegExp(pattern, caseSensitive ? "g" : "gi");
-    
-    const matches: { line: number; content: string }[] = [];
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (line !== undefined && regex.test(line)) {
-        matches.push({
-          line: i + 1,
-          content: line.substring(0, 200), // Truncate long lines
-        });
+  private getFiles(dir: string, filePattern: string, files: string[] = []): string[] {
+    try {
+      const entries = readdirSync(dir, { withFileTypes: true });
+      const pattern = new RegExp(filePattern.replace(/\*/g, ".*") + "$");
+      
+      for (const entry of entries) {
+        if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
+        
+        const fullPath = resolve(dir, entry.name);
+        
+        if (entry.isDirectory()) {
+          this.getFiles(fullPath, filePattern, files);
+        } else if (entry.isFile() && pattern.test(entry.name)) {
+          files.push(fullPath);
+        }
       }
+    } catch {
+      // Skip
     }
     
-    return matches;
-  } catch {
-    return [];
-  }
-}
-
-/**
- * Handler for search_code tool
- */
-export async function searchCodeHandler(args: Record<string, unknown>): Promise<string> {
-  const pattern = args.pattern as string;
-  const path = (args.path as string) || process.cwd();
-  const filePattern = (args.filePattern as string) || "*";
-  const maxResults = (args.maxResults as number) || 50;
-  const caseSensitive = (args.caseSensitive as boolean) || false;
-
-  if (!pattern) {
-    return "Error: pattern is required";
+    return files;
   }
 
-  try {
-    // Convert glob pattern to regex
-    const ext = filePattern.startsWith("*.") ? filePattern.slice(1) : filePattern;
-    const fileRegex = ext.startsWith(".") 
-      ? new RegExp(`\\${ext}$`)
-      : new RegExp(filePattern.replace(/\*/g, ".*"));
-    
-    // Get all matching files
-    const files = getFiles(path, fileRegex);
-    
-    if (files.length === 0) {
-      return `No files matching "${filePattern}" found in ${path}`;
-    }
-    
-    // Search in each file
+  private searchFiles(files: string[], pattern: string, caseSensitive: boolean): { file: string; line: number; content: string }[] {
     const allMatches: { file: string; line: number; content: string }[] = [];
     
-    for (const file of files) {
-      const matches = searchInFile(file, pattern, caseSensitive);
-      for (const match of matches) {
-        allMatches.push({
-          file: file.replace(process.cwd(), "."),
-          line: match.line,
-          content: match.content,
-        });
+    for (const filePath of files) {
+      try {
+        const content = readFileSync(filePath, "utf-8");
+        const lines = content.split("\n");
+        const regex = new RegExp(pattern, caseSensitive ? "g" : "gi");
+        
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          if (line !== undefined && regex.test(line)) {
+            allMatches.push({
+              file: filePath.replace(process.cwd(), "."),
+              line: i + 1,
+              content: line.substring(0, 200),
+            });
+          }
+        }
+      } catch {
+        // Skip
       }
     }
     
-    if (allMatches.length === 0) {
-      return `No matches found for "${pattern}"`;
-    }
-    
-    // Limit results
-    const limited = allMatches.slice(0, maxResults);
-    const showing = limited.length;
-    const total = allMatches.length;
-    
-    // Format results
-    const results = limited.map(m => 
-      `${m.file}:${m.line}: ${m.content}`
-    ).join("\n");
-    
-    const suffix = total > maxResults 
-      ? `\n\n... (showing ${showing}/${total} matches)` 
-      : "";
-    
-    return `Found ${total} matches for "${pattern}":\n\n\`\`\`\n${results}\n\`\`\`${suffix}`;
-  } catch (error) {
-    if (error instanceof Error) {
-      return `Error searching: ${error.message}`;
-    }
-    return `Error searching: ${String(error)}`;
+    return allMatches;
   }
 }

@@ -3,73 +3,63 @@
  */
 
 import { writeFileSync, existsSync, mkdirSync } from "node:fs";
-import { resolve, dirname } from "node:path";
-import type { ToolDefinition } from "../types.js";
+import { dirname } from "node:path";
+import { BaseTool, type ParameterSchema } from "./base-tool.js";
+import type { ToolOutput } from "../types.js";
 
-/**
- * Write file tool definition
- */
-export const writeFileTool: ToolDefinition = {
-  type: "function",
-  function: {
-    name: "write_file",
-    description: "Write content to a file. Creates the file if it doesn't exist, or overwrites it if it does. Use this to create or modify code files, config files, or any text content.",
-    parameters: {
-      type: "object",
-      properties: {
-        path: {
-          type: "string",
-          description: "The path to the file to write (relative to project root or absolute path)",
-        },
-        content: {
-          type: "string",
-          description: "The content to write to the file",
-        },
-        createDirs: {
-          type: "boolean",
-          description: "Create parent directories if they don't exist (default: true)",
-        },
-      },
-      required: ["path", "content"],
+export class WriteFileTool extends BaseTool {
+  readonly name = "write_file";
+  readonly description = "Write content to a file. Creates the file if it doesn't exist, or overwrites it if it does. Use this to create or modify code files, config files, or any text content.";
+
+  protected readonly parameters: ParameterSchema[] = [
+    {
+      name: "path",
+      type: "string",
+      description: "The path to the file to write (relative to project root or absolute path)",
+      required: true,
     },
-  },
-};
+    {
+      name: "content",
+      type: "string",
+      description: "The content to write to the file",
+      required: true,
+    },
+    {
+      name: "createDirs",
+      type: "boolean",
+      description: "Create parent directories if they don't exist (default: true)",
+      default: true,
+    },
+  ];
 
-/**
- * Handler for write_file tool
- */
-export async function writeFileHandler(args: Record<string, unknown>): Promise<string> {
-  const path = args.path as string;
-  const content = args.content as string;
-  const createDirs = (args.createDirs as boolean) ?? true;
+  async execute(args: Record<string, unknown>): Promise<ToolOutput> {
+    const path = this.requireParam<string>(args, "path");
+    const content = this.requireParam<string>(args, "content");
+    const createDirs = this.getParam(args, "createDirs", true);
 
-  if (!path) {
-    return "Error: path is required";
-  }
-  if (content === undefined || content === null) {
-    return "Error: content is required";
-  }
-
-  try {
-    // Resolve relative paths from project root
-    const absolutePath = path.startsWith("/") ? path : resolve(process.cwd(), path);
-    
-    // Create parent directories if needed
-    if (createDirs) {
-      const dir = dirname(absolutePath);
-      if (!existsSync(dir)) {
-        mkdirSync(dir, { recursive: true });
+    try {
+      const absolutePath = this.resolvePath(path);
+      
+      // Create parent directories if needed
+      if (createDirs) {
+        const dir = dirname(absolutePath);
+        if (!existsSync(dir)) {
+          mkdirSync(dir, { recursive: true });
+        }
       }
+      
+      writeFileSync(absolutePath, content, "utf-8");
+      
+      const fileSize = Buffer.byteLength(content, "utf-8");
+      return {
+        message: `${absolutePath} (${fileSize})`,
+        content: `Wrote ${fileSize} bytes to ${absolutePath}`,
+      };
+    } catch (error) {
+      return {
+        message: `Error writing ${path}`,
+        content: `Error: ${error instanceof Error ? error.message : String(error)}`,
+      };
     }
-    
-    writeFileSync(absolutePath, content, "utf-8");
-    
-    const fileSize = Buffer.byteLength(content, "utf-8");
-    return `Successfully wrote ${fileSize} bytes to: ${absolutePath}`;
-  } catch (error) {
-    if (error instanceof Error) {
-      return `Error writing file: ${error.message}`;
-    }
-    return `Error writing file: ${String(error)}`;
   }
 }

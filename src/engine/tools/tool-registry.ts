@@ -3,6 +3,7 @@
  */
 
 import type { ToolDefinition, ToolHandler, RegisteredTool, ToolResult, ToolCall } from "./types.js";
+import { BaseTool } from "./builtin/base-tool.js";
 
 /**
  * ToolRegistry - Singleton for managing available tools
@@ -24,14 +25,42 @@ export class ToolRegistry {
   }
 
   /**
-   * Register a tool with its handler
+   * Register a tool instance (class-based)
    */
-  public register(definition: ToolDefinition, handler: ToolHandler): void {
-    if (this.tools.has(definition.function.name)) {
-      console.warn(`[ToolRegistry] Tool "${definition.function.name}" already registered, overwriting`);
+  public register(tool: BaseTool): void;
+  
+  /**
+   * Register a tool with definition and handler (legacy)
+   */
+  public register(definition: ToolDefinition, handler: ToolHandler): void;
+  
+  /**
+   * Register implementation
+   */
+  public register(definitionOrTool: ToolDefinition | BaseTool, handler?: ToolHandler): void {
+    if (definitionOrTool instanceof BaseTool) {
+      // Class-based tool
+      const tool = definitionOrTool;
+      if (this.tools.has(tool.name)) {
+        console.warn(`[ToolRegistry] Tool "${tool.name}" already registered, overwriting`);
+      }
+      this.tools.set(tool.name, {
+        definition: tool.definition,
+        handler: (args) => tool.execute(args),
+      });
+      console.log(`[ToolRegistry] Registered tool: ${tool.name}`);
+    } else {
+      // Legacy function-based tool
+      const definition = definitionOrTool;
+      if (handler === undefined) {
+        throw new Error("Handler is required for legacy registration");
+      }
+      if (this.tools.has(definition.function.name)) {
+        console.warn(`[ToolRegistry] Tool "${definition.function.name}" already registered, overwriting`);
+      }
+      this.tools.set(definition.function.name, { definition, handler });
+      console.log(`[ToolRegistry] Registered tool: ${definition.function.name}`);
     }
-    this.tools.set(definition.function.name, { definition, handler });
-    console.log(`[ToolRegistry] Registered tool: ${definition.function.name}`);
   }
 
   /**
@@ -83,9 +112,12 @@ export class ToolRegistry {
 
       // Execute handler
       const result = await tool.handler(args);
+      
+      // message is for UI display, content is for LLM
       return {
         toolCallId: toolCall.id,
-        output: result,
+        output: result.content, // For LLM
+        structuredOutput: result, // For UI
       };
     } catch (error) {
       return {

@@ -4,107 +4,70 @@
 
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
-import type { ToolDefinition } from "../types.js";
+import { BaseTool, type ParameterSchema } from "./base-tool.js";
+import type { ToolOutput } from "../types.js";
 
 const execAsync = promisify(exec);
 
-/**
- * Run command tool definition
- */
-export const runCommandTool: ToolDefinition = {
-  type: "function",
-  function: {
-    name: "run_command",
-    description: "Execute a shell command and return its output. Use this to run npm scripts, git commands, build tools, linters, or any other command-line tools. BE CAREFUL with destructive commands like rm -rf.",
-    parameters: {
-      type: "object",
-      properties: {
-        command: {
-          type: "string",
-          description: "The shell command to execute",
-        },
-        timeout: {
-          type: "number",
-          description: "Maximum time to wait in milliseconds (default: 30000, max: 120000)",
-        },
-        cwd: {
-          type: "string",
-          description: "Working directory for the command (defaults to project root)",
-        },
-      },
-      required: ["command"],
+export class RunCommandTool extends BaseTool {
+  readonly name = "run_command";
+  readonly description = "Execute a shell command and return its output. Use this to run npm scripts, git commands, build tools, linters, or any other command-line tools. BE CAREFUL with destructive commands like rm -rf.";
+
+  protected readonly parameters: ParameterSchema[] = [
+    {
+      name: "command",
+      type: "string",
+      description: "The shell command to execute",
+      required: true,
     },
-  },
-};
-
-/**
- * Handler for run_command tool
- */
-export async function runCommandHandler(args: Record<string, unknown>): Promise<string> {
-  const command = args.command as string;
-  const timeout = Math.min((args.timeout as number) ?? 30000, 120000);
-  const cwd = args.cwd as string | undefined;
-
-  if (!command) {
-    return "Error: command is required";
-  }
-
-  // Security: Block obviously dangerous commands
-  const dangerousPatterns = [
-    /rm\s+-rf\s+\/(?:\s|$)/,  // rm -rf /
-    /:(){ :|:& };:/,           // Fork bomb
-    /dd\s+if=.*of=\/dev\/sd/, // Disk wipe
+    {
+      name: "timeout",
+      type: "number",
+      description: "Maximum time to wait in milliseconds (default: 30000, max: 120000)",
+      default: 30000,
+    },
+    {
+      name: "cwd",
+      type: "string",
+      description: "Working directory for the command (defaults to project root)",
+    },
   ];
-  
-  for (const pattern of dangerousPatterns) {
-    if (pattern.test(command)) {
-      return `Error: Command blocked for security reasons: potentially dangerous operation detected`;
-    }
-  }
 
-  try {
-    const { stdout, stderr } = await execAsync(command, {
-      timeout,
-      cwd: cwd || process.cwd(),
-      maxBuffer: 10 * 1024 * 1024, // 10MB max output
-    });
+  async execute(args: Record<string, unknown>): Promise<ToolOutput> {
+    const command = this.requireParam<string>(args, "command");
+    const timeout = Math.min(this.getParam(args, "timeout", 30000), 120000);
+    const cwd = this.getParam<string | undefined>(args, "cwd", undefined);
 
-    let result = "";
-    
-    if (stdout) {
-      result += `STDOUT:\n\`\`\`\n${stdout}\n\`\`\``;
+    // Security check
+    const dangerous = /rm\s+-rf\s+\//.test(command) || /:\(\){ :\|:& };:/ .test(command);
+    if (dangerous) {
+      return {
+        message: `Command blocked`,
+        content: "Error: Command blocked for security reasons",
+      };
     }
-    
-    if (stderr) {
-      result += result ? "\n\n" : "";
-      result += `STDERR:\n\`\`\`\n${stderr}\n\`\`\``;
+
+    try {
+      const { stdout, stderr } = await execAsync(command, {
+        timeout,
+        cwd: cwd || process.cwd(),
+        maxBuffer: 10 * 1024 * 1024,
+      });
+
+      let output = "";
+      if (stdout) output += stdout;
+      if (stderr) output += (output ? "\n" : "") + stderr;
+      if (!output) output = "(no output)";
+
+      return {
+        message: `${command} (${output.length})`,
+        content: output,
+      };
+    } catch (error) {
+      return {
+        message: `Command failed`,
+        content: `Error: ${error instanceof Error ? error.message : String(error)}`,
+      };
     }
-    
-    if (!stdout && !stderr) {
-      result = "(Command completed with no output)";
-    }
-    
-    return result;
-  } catch (error) {
-    if (error instanceof Error) {
-      // Check for timeout
-      if (error.message.includes("timeout")) {
-        return `Error: Command timed out after ${timeout}ms: ${command}`;
-      }
-      
-      // Check for maxBuffer exceeded
-      if (error.message.includes("maxBuffer")) {
-        return `Error: Command output exceeded 10MB limit: ${command}`;
-      }
-      
-      // Command failed (non-zero exit)
-      const match = error.message.match(/^Command failed:[\s\S]*?stderr:([\s\S]*?)(?=\n|$)/);
-      if (match) {
-        return `STDERR:\n\`\`\`\n${match[1]}\n\`\`\``;
-      }
-      
-      return `Error executing command: ${error.message}`;
-    }
-    return `Error executing command: ${String(error)}`;
   }
 }

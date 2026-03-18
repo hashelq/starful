@@ -54,7 +54,7 @@ export function formatToolResults(toolResults: ToolResult[]): Array<{
   return toolResults.map(result => ({
     role: "tool" as const,
     tool_call_id: result.toolCallId,
-    content: result.error ? `Error: ${result.error}` : result.output,
+    content: result.output, // Already has the content from registry
   }));
 }
 

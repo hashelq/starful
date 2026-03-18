@@ -476,9 +476,9 @@ Start by asking me something!`;
     flexGrow: 1,
     scrollY: true,
     stickyScroll: true,
+    stickyStart: "bottom",
     viewportCulling: true, // Only render visible items for performance
   });
-  scrollBox.stickyStart = "bottom";
   scrollBox.add(historyContainer);
 
   // Track scroll changes via onMouseScroll

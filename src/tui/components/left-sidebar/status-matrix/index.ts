@@ -90,7 +90,6 @@ import {
   MandelbrotAnimation,
   PulseRingsAnimation,
   LissajousAnimation,
-  WavegrassAnimation,
 } from "./animations/index.js";
 
 /**

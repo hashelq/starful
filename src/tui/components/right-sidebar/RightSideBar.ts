@@ -51,11 +51,13 @@ export class RightSideBar {
       paddingY: 1,
     });
 
-    // Scroll box for content
-    this._scrollBox = new ScrollBoxRenderable(renderer, {
+    // Scroll box for content - enable sticky scroll to auto-scroll to bottom on new prompts
+    this._scrollBox = new ScrollBoxRenderable(this._renderer, {
       width: "100%",
       height: "auto",
       scrollY: true,
+      stickyScroll: true,
+      stickyStart: "bottom",
     });
 
     // Container for history items

@@ -89,10 +89,10 @@ export class PromptHistory {
   }
   
   /**
-   * Get previous prompt (up arrow) - normal mode
-   * Returns empty string if at the beginning
+   * Go to older history items (UP arrow)
+   * Increments index to go toward older items
    */
-  previous(): string {
+  goOlder(): string {
     if (this._history.length === 0) return "";
     
     if (this._currentIndex === -1) {
@@ -106,10 +106,10 @@ export class PromptHistory {
   }
   
   /**
-   * Get next prompt (down arrow) - normal mode
-   * Returns empty string if at the end
+   * Go to newer history items (DOWN arrow)
+   * Decrements index to go toward newer items
    */
-  next(): string {
+  goNewer(): string {
     if (this._history.length === 0 || this._currentIndex === -1) return "";
     
     if (this._currentIndex > 0) {

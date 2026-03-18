@@ -1,6 +1,7 @@
 import { EventEmitter } from "../EventEmitter.js";
 import {
   loadConfig,
+  type Config,
   type ProviderConfig,
   type ModelEntry,
 } from "../config.js";
@@ -15,13 +16,42 @@ import {
  * - Setters accept ModelEntry (type-safe)
  */
 export class ProviderModelManager extends EventEmitter {
-  private currentModel: ModelEntry;
-  private currentProviderConfig: ProviderConfig;
+  private config: Config;
+  private currentModel!: ModelEntry;
+  private currentProviderConfig!: ProviderConfig;
 
-  constructor() {
+  /**
+   * @param config Optional Config instance. If not provided, loads from disk.
+   */
+  constructor(config?: Config) {
     super();
     
-    // Load initial model with validation
+    // Use provided config or load from disk
+    this.config = config ?? loadConfig();
+    
+    // Initialize with default model
+    this.initializeDefaultModel();
+  }
+
+  /**
+   * Reinitialize with a new Config (after config save)
+   */
+  reloadConfig(config: Config): void {
+    this.config = config;
+    // Re-validate current model still exists
+    const modelExists = this.config.findModel(
+      `${this.currentModel.provider}/${this.currentModel.name}`
+    );
+    if (!modelExists) {
+      // Fall back to default
+      this.initializeDefaultModel();
+    }
+  }
+
+  /**
+   * Initialize with default model from config
+   */
+  private initializeDefaultModel(): void {
     const { provider, name } = this.parseDefaultModel();
     const modelEntry = this.findModel(`${provider}/${name}`);
     
@@ -42,8 +72,7 @@ export class ProviderModelManager extends EventEmitter {
    * Parse default model from config
    */
   private parseDefaultModel(): { provider: string; name: string } {
-    const config = loadConfig();
-    const defaultModel = config.getDefaultModel();
+    const defaultModel = this.config.getDefaultModel();
     if (!defaultModel) {
       return { provider: "ollama", name: "qwen3.5:35b-better" };
     }
@@ -90,24 +119,14 @@ export class ProviderModelManager extends EventEmitter {
    * Find provider config by name (internal)
    */
   private findProviderConfig(name: string): ProviderConfig | undefined {
-    const config = loadConfig();
-    return config.getProvider(name);
+    return this.config.getProvider(name);
   }
 
   /**
    * Find model by "provider/model" string
    */
-  findModel(index: string): ModelEntry | undefined {
-    const config = loadConfig();
-    return config.findModel(index);
-  }
-
-  /**
-   * Find model by provider and name
-   */
-  findModelByProviderAndName(provider: string, name: string): ModelEntry | undefined {
-    const config = loadConfig();
-    return config.findModelByProviderAndName(provider, name);
+  findModel(index: `${string}/${string}`): ModelEntry | undefined {
+    return this.config.findModel(index);
   }
 
   // ─────────────────────────────────────────
@@ -125,32 +144,21 @@ export class ProviderModelManager extends EventEmitter {
   }
 
   /**
-   * Set model by provider and name strings (convenience wrapper)
+   * Set model by "provider/model" string index
    */
-  setModelFull(provider: string, model: string): void {
-    const modelEntry = this.findModelByProviderAndName(provider, model);
-    if (!modelEntry) {
-      const available = this.listModelsForProvider(provider).map(m => m.name);
-      throw new Error(
-        `Model "${model}" not found for provider "${provider}". ` +
-        `Available: ${available.join(", ")}`
-      );
+  setModelByIndex(index: string): void {
+    const model = this.findModel(index as `${string}/${string}`);
+    if (!model) {
+      throw new Error(`Model "${index}" not found`);
     }
-    this.setModel(modelEntry);
+    this.setModel(model);
   }
 
   /**
-   * Set model by "provider/model" string
+   * Get all models as flat array
    */
-  setModelByIndex(index: string): void {
-    const modelEntry = this.findModel(index);
-    if (!modelEntry) {
-      const available = this.listAllModelsFlat();
-      throw new Error(
-        `Model "${index}" not found. Available: ${available.join(", ")}`
-      );
-    }
-    this.setModel(modelEntry);
+  listModels(): ModelEntry[] {
+    return this.config.getAllModelsFlat();
   }
 
   // ─────────────────────────────────────────
@@ -160,45 +168,15 @@ export class ProviderModelManager extends EventEmitter {
   /**
    * List all available providers (that have models)
    */
-  listProviders(): string[] {
-    const config = loadConfig();
-    const providers = config.getProviders();
-    return providers.map(p => p.name).filter(name => {
-      const models = config.getModels(name);
-      return models.length > 0;
-    });
-  }
-
-  /**
-   * List models for current provider
-   */
-  listModels(): ModelEntry[] {
-    return this.listModelsForProvider(this.getProvider());
-  }
-
-  /**
-   * List models for a specific provider
-   */
-  listModelsForProvider(provider: string): ModelEntry[] {
-    const config = loadConfig();
-    return config.getModels(provider);
+  listProviders(): Array<{ name: string } & ProviderConfig> {
+    return this.config.getProviders();
   }
 
   /**
    * List all models grouped by provider
    */
   listAllModels(): Record<string, ModelEntry[]> {
-    const config = loadConfig();
-    return config.toJSON().models;
-  }
-
-  /**
-   * List all models as flat array
-   */
-  private listAllModelsFlat(): string[] {
-    const config = loadConfig();
-    const allModels = config.getAllModelsFlat();
-    return allModels.map(m => `${m.provider}/${m.name}`);
+    return this.config.toJSON().models;
   }
 
   // ─────────────────────────────────────────

@@ -36,7 +36,7 @@ export function getTextInRange(
     for (let x = startX; x <= endX && x < buf.width; x++) {
       const index = y * buf.width + x;
       const charCode = charArr[index];
-      if (charCode !== 0) {
+      if (charCode !== undefined && charCode !== 0) {
         line += String.fromCharCode(charCode);
       }
     }
@@ -64,7 +64,7 @@ export function getLineText(renderer: CliRenderer, y: number, x1: number = 0, x2
   for (let x = x1; x <= endX && x < buf.width; x++) {
     const index = y * buf.width + x;
     const charCode = charArr[index];
-    if (charCode !== 0) {
+    if (charCode !== undefined && charCode !== 0) {
       line += String.fromCharCode(charCode);
     }
   }
@@ -86,7 +86,7 @@ export function getAllText(renderer: CliRenderer): string {
     for (let x = 0; x < buf.width; x++) {
       const index = y * buf.width + x;
       const charCode = charArr[index];
-      if (charCode !== 0) {
+      if (charCode !== undefined && charCode !== 0) {
         line += String.fromCharCode(charCode);
       }
     }

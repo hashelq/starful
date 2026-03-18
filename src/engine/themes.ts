@@ -145,6 +145,8 @@ export function getTheme(name: string): Theme {
   return {
     name: "fallback",
     colors: {
+      background: "#1e1e2e",
+      foreground: "#cdd6f4",
       base00: "#1e1e2e",
       base01: "#181825",
       base02: "#313244",

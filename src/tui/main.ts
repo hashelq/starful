@@ -37,6 +37,7 @@ import { getTheme as getThemeFromConfig, isCentered, getCenteredWidth } from "..
 import { subscribeToThemeChanges } from "../engine/theme.js";
 import { TUIState } from "./state.js";
 import { loadConfig, parseDefaultModel, getProviderConfig } from "../engine/config.js";
+import { Engine } from "../engine/Engine.js";
 import { copyToClipboard } from "./clipboard.js";
 import type { UIImplementation } from "../engine/ui.js";
 
@@ -128,6 +129,12 @@ async function main() {
     model
   );
   console.log(`[main] llmProvider created:`, llmProvider.constructor.name);
+
+  // AGENT: Create Engine instance (for commands and future migration)
+  const engine = new Engine({
+    systemPrompt: "You are a helpful AI assistant integrated into Starful, an AI-powered terminal IDE. You can help with coding tasks, explaining concepts, answering questions, and more. Provide detailed, accurate responses.",
+  });
+  console.log(`[main] Engine created`);
 
   // Create CLI renderer with keyboard shortcuts
   const renderer = await createCliRenderer({
@@ -410,6 +417,15 @@ async function main() {
     isGenerating: () => appState.isGenerating,
     onExit: () => cleanup(),
     onSubmit: async (value: string) => {
+      // Check if it's a command (starts with /)
+      if (value.startsWith("/")) {
+        const result = await engine.executeCommandString(value);
+        if (!result.success) {
+          addStaticMessage("assistant", ` Error: ${result.error || "Unknown error"}`);
+        }
+        return;
+      }
+
       // Add user message to history (includes adding to right sidebar)
       addStaticMessage("user", ` ${value}`);
 
@@ -434,6 +450,10 @@ async function main() {
   ): Promise<void> {
     if (appState.isGenerating) return;
     appState.isGenerating = true;
+
+    // Declare at function scope so catch block can access them
+    let thinkingStarted = false;
+    let contentStarted = false;
 
     try {
       // Prepare messages with system behavior injection

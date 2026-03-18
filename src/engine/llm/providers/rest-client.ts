@@ -199,6 +199,7 @@ export abstract class RestLLMClient implements LLMProvider {
     signal?: AbortSignal,
   ): AsyncIterable<T> {
     const url = this.buildUrl(endpoint);
+    console.log(url, arguments);
     const combinedSignal = this.combineSignal(signal);
 
     const response = await fetch(url, {

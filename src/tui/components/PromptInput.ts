@@ -81,7 +81,7 @@ export class PromptInput {
       // Up arrow - go to previous (older) history item
       if (key.name === "up") {
         this._isNavigating = true;
-        this._handleHistoryPrevious(history);
+        this._handleHistoryNext(history);
         this._isNavigating = false;
         return true;
       }
@@ -89,7 +89,7 @@ export class PromptInput {
       // Down arrow - go to next (newer) history item
       if (key.name === "down") {
         this._isNavigating = true;
-        this._handleHistoryNext(history);
+        this._handleHistoryPrevious(history);
         this._isNavigating = false;
         return true;
       }

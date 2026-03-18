@@ -2,41 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 
 /**
- * Generic Brand type for creating type-safe branded types
- * Usage: type ModelName = Brand<string, "ModelName">
- */
-export type Brand<T, B extends string> = T & { readonly brand: B };
-
-/**
- * Branded types
- */
-export type ProviderName = Brand<string, "ProviderName">;
-export type ModelName = Brand<string, "ModelName">;
-export type ModelIndex = `${ProviderName}/${ModelName}`;
-
-/**
- * Brand a string as ModelName
- */
-export function modelName(value: string): ModelName {
-  return value as ModelName;
-}
-
-/**
- * Brand a string as ProviderName
- */
-export function providerName(value: string): ProviderName {
-  return value as ProviderName;
-}
-
-/**
- * Create ModelIndex from provider and model strings
- * Format: "provider/model"
- */
-export function providerModelIndex(str: `${string}/${string}`): ModelIndex {
-  return str as ModelIndex;
-}
-
-/**
  * Provider configuration types
  */
 export interface ProviderConfig {
@@ -48,55 +13,52 @@ export interface ProviderConfig {
   headers?: Record<string, string>;
 }
 
-export type ProvidersConfig = Record<ProviderName, ProviderConfig>;
-
+/**
+ * Model entry - contains model metadata
+ */
 export interface ModelEntry {
   provider: string;
   name: string;
 }
 
 /**
- * Models as Record<modelName, { provider, name }>
- */
-export type ModelsConfig = Record<ModelIndex, ModelEntry>;
-
-/**
  * Full configuration interface (raw data)
+ * Models are now keyed by provider: Record<provider, ModelEntry[]>
  */
 export interface ConfigData {
-  providers: ProvidersConfig;
-  models: ModelsConfig;
-  defaultModel: ModelIndex;
+  providers: Record<string, ProviderConfig>;
+  models: Record<string, ModelEntry[]>;  // Keyed by provider name
+  defaultModel: { provider: string; name: string };
 }
 
 /**
  * Config - type-safe access to configuration
- * Parses default model once and remembers it
  */
 export class Config {
   private data: ConfigData;
-  private _parsedDefaultModel: ({ id: ModelIndex } & ModelEntry) | undefined;
+  private _validated: boolean = false;
 
   constructor(data: ConfigData) {
     this.data = data;
-    // Validate on construction
-    this._validate();
-    // Parse default model once after validation
-    this._parsedDefaultModel = this._parseDefaultModel();
+    this.validate();
   }
 
   /**
-   * Validate entire config: providers and models
+   * Validate entire config
    */
-  private _validate(): void {
-    this._validateProviders();
-    this._validateModels();
+  private validate(): void {
+    if (this._validated) return;
+    
+    this.validateProviders();
+    this.validateModels();
+    
+    this._validated = true;
   }
 
   /**
    * Validate all provider configs exist and have required fields
    */
-  private _validateProviders(): void {
+  private validateProviders(): void {
     const providers = Object.entries(this.data.providers);
     
     if (providers.length === 0) {
@@ -104,7 +66,6 @@ export class Config {
     }
 
     for (const [name, config] of providers) {
-      // Must have either host+port OR baseUrl
       const hasHostPort = config.host && config.port;
       const hasBaseUrl = config.baseUrl;
       
@@ -119,105 +80,115 @@ export class Config {
   /**
    * Validate all models reference valid providers
    */
-  private _validateModels(): void {
-    const modelIndices = Object.keys(this.data.models);
+  private validateModels(): void {
+    const allModels = this.getAllModelsFlat();
     
-    if (modelIndices.length === 0) {
+    if (allModels.length === 0) {
       throw new Error("No models configured! Add at least one model.");
     }
 
-    for (const index of modelIndices) {
-      // Use lastIndexOf to handle model names that might contain "/"
-      const lastSlash = index.lastIndexOf("/");
-      if (lastSlash === -1) {
-        throw new Error(`Model "${index}" must be in "provider/model" format`);
-      }
-      const providerNameStr = index.slice(0, lastSlash);
-      const provider = providerName(providerNameStr);
-      
-      if (!this.data.providers[provider]) {
+    for (const model of allModels) {
+      if (!this.data.providers[model.provider]) {
         throw new Error(
-          `Model "${index}" references provider "${providerNameStr}" which is not configured!`
+          `Model "${model.name}" references provider "${model.provider}" which is not configured!`
         );
       }
     }
   }
 
-  private _parseDefaultModel(): ({ id: ModelIndex } & ModelEntry) | undefined {
-    const defaultModel = this.data.defaultModel;
-    if (!defaultModel) return undefined;
-
-    let index = providerModelIndex(defaultModel);
-    const modelEntry = this.data.models[index];
-
-    if (!modelEntry)
-      throw new Error(`Model "${index}" is default, but not configured!`);
-
-    return {
-      id: defaultModel,
-      ...modelEntry,
-    };
-  }
+  // ─────────────────────────────────────────────
+  // Provider Methods
+  // ─────────────────────────────────────────────
 
   /**
-   * Get provider by name - returns undefined if not found
+   * Get provider config by name
    */
   getProvider(name: string): ProviderConfig | undefined {
-    const branded = providerName(name);
-    return this.data.providers[branded];
+    return this.data.providers[name];
   }
 
   /**
    * Check if provider exists
    */
   hasProvider(name: string): boolean {
-    return providerName(name) in this.data.providers;
-  }
-
-  /**
-   * Get model by index - returns undefined if not found
-   */
-  getModel(index: ModelIndex): ModelEntry | undefined {
-    return this.data.models[index];
-  }
-
-  /**
-   * Check if model exists
-   */
-  hasModel(index: `${string}/${string}`): ModelIndex | undefined {
-    return index in this.data.models ? providerModelIndex(index) : undefined;
-  }
-
-  /**
-   * Get default model - returns undefined if not set or doesn't exist
-   * Returns { id: ModelIndex, provider, name } or undefined
-   */
-  getDefaultModel(): ({ id: ModelIndex } & ModelEntry) | undefined {
-    return this._parsedDefaultModel;
+    return name in this.data.providers;
   }
 
   /**
    * Get all providers as array
    */
-  getProviders(): Array<{ name: ProviderName } & ProviderConfig> {
+  getProviders(): Array<{ name: string } & ProviderConfig> {
     return Object.entries(this.data.providers).map(([name, config]) => ({
-      name: name as ProviderName,
+      name,
       ...config,
     }));
   }
 
+  // ─────────────────────────────────────────────
+  // Model Methods
+  // ─────────────────────────────────────────────
+
   /**
-   * Get all models as array
+   * Find model by "provider/model" string
    */
-  getModels(): Array<{ index: ModelIndex } & ModelEntry> {
-    return Object.entries(this.data.models).map(([index, entry]) => ({
-      index: index as ModelIndex,
-      ...entry,
-    }));
+  findModel(index: string): ModelEntry | undefined {
+    const lastSlash = index.lastIndexOf("/");
+    if (lastSlash === -1) return undefined;
+    
+    const provider = index.slice(0, lastSlash);
+    const name = index.slice(lastSlash + 1);
+    
+    return this.findModelByProviderAndName(provider, name);
   }
 
   /**
-   * Get the raw config data (for serialization)
+   * Find model by provider and name
+   */
+  findModelByProviderAndName(provider: string, name: string): ModelEntry | undefined {
+    const models = this.data.models[provider];
+    if (!models) return undefined;
+    
+    return models.find(m => m.name === name);
+  }
+
+  /**
+   * Check if model exists
+   */
+  hasModel(index: string): boolean {
+    return this.findModel(index) !== undefined;
+  }
+
+  /**
+   * Get models for a specific provider
+   */
+  getModels(provider: string): ModelEntry[] {
+    return this.data.models[provider] ?? [];
+  }
+
+  /**
+   * Get all models as flat array
+   */
+  getAllModelsFlat(): ModelEntry[] {
+    const result: ModelEntry[] = [];
+    for (const models of Object.values(this.data.models)) {
+      result.push(...models);
+    }
+    return result;
+  }
+
+  /**
+   * Get default model
+   */
+  getDefaultModel(): { provider: string; name: string } | undefined {
+    return this.data.defaultModel;
+  }
+
+  // ─────────────────────────────────────────────
+  // Serialization
+  // ─────────────────────────────────────────────
+
+  /**
+   * Get the raw config data
    */
   toJSON(): ConfigData {
     return this.data;
@@ -229,7 +200,7 @@ export class Config {
  */
 export const DEFAULT_CONFIG: ConfigData = {
   providers: {
-    [providerName("ollama")]: {
+    ollama: {
       base: "ollama",
       host: "localhost",
       port: 11434,
@@ -237,18 +208,12 @@ export const DEFAULT_CONFIG: ConfigData = {
     },
   },
   models: {
-    [providerModelIndex("ollama/qwen3.5:35b-better")]: {
-      provider: providerName("ollama"),
-      name: modelName("qwen3.5:35b-better"),
-    },
+    ollama: [
+      { provider: "ollama", name: "qwen3.5:35b-better" },
+    ],
   },
-  defaultModel: providerModelIndex("ollama/qwen3.5:35b-better"),
+  defaultModel: { provider: "ollama", name: "qwen3.5:35b-better" },
 };
-
-/**
- * Configuration type (for backward compatibility)
- */
-export type ConfigType = Config;
 
 /**
  * Get config file path
@@ -271,7 +236,6 @@ function ensureConfigDir(): void {
 
 /**
  * Load configuration from file or return defaults
- * Returns Config for type-safe access
  */
 export function loadConfig(): Config {
   const configPath = getConfigPath();
@@ -281,8 +245,6 @@ export function loadConfig(): Config {
       const data = fs.readFileSync(configPath, "utf-8");
       const loaded = JSON.parse(data);
       const config = mergeConfig(DEFAULT_CONFIG, loaded);
-
-      // Save to ensure all defaults are present
       saveConfig(config);
       return new Config(config);
     }
@@ -290,7 +252,6 @@ export function loadConfig(): Config {
     console.warn("Failed to load config, using defaults:", error);
   }
 
-  // First run - save default config
   saveConfig(DEFAULT_CONFIG);
   return new Config({ ...DEFAULT_CONFIG });
 }
@@ -312,7 +273,7 @@ export function saveConfig(config: ConfigData | Config): void {
 }
 
 /**
- * Deep merge two configs (defaults + loaded)
+ * Deep merge two configs
  */
 function mergeConfig(
   defaults: ConfigData,
@@ -341,21 +302,23 @@ function mergeConfig(
   return result;
 }
 
+// ─────────────────────────────────────────────
+// Convenience Helper Functions
+// ─────────────────────────────────────────────
+
 /**
- * Get default model in "provider/model" format
+ * Get default model
  */
-export function getDefaultModel(): ModelIndex | undefined {
+export function getDefaultModel(): { provider: string; name: string } | undefined {
   const config = loadConfig();
-  return config.getDefaultModel()?.id;
+  return config.getDefaultModel();
 }
 
 /**
- * Parse default model to get provider and model name
- * Returns { provider: "ollama", model: "qwen3.5:35b-better" }
+ * Parse default model (backward compatible)
  */
 export function parseDefaultModel(): { provider: string; model: string } {
-  const config = loadConfig();
-  const defaultModel = config.getDefaultModel();
+  const defaultModel = getDefaultModel();
   if (!defaultModel) {
     return { provider: "ollama", model: "qwen3.5:35b-better" };
   }
@@ -366,17 +329,15 @@ export function parseDefaultModel(): { provider: string; model: string } {
 }
 
 /**
- * Set default model in "provider/model" format
+ * Set default model
  */
 export function setDefaultModel(provider: string, model: string): void {
   const config = loadConfig();
   const rawConfig = config.toJSON();
-  const index = providerModelIndex(`${provider}/${model}` as ModelIndex);
-  rawConfig.defaultModel = index;
-
+  
   // Ensure provider exists
-  if (!config.hasProvider(provider)) {
-    rawConfig.providers[providerName(provider)] = {
+  if (!rawConfig.providers[provider]) {
+    rawConfig.providers[provider] = {
       base: provider,
       host: "localhost",
       port: 11434,
@@ -384,56 +345,33 @@ export function setDefaultModel(provider: string, model: string): void {
     };
   }
 
-  // Ensure model exists for provider
-  rawConfig.models[index] = {
-    provider: providerName(provider),
-    name: modelName(model),
-  };
+  // Ensure model array exists for provider
+  if (!rawConfig.models[provider]) {
+    rawConfig.models[provider] = [];
+  }
 
+  // Add model if not exists
+  const exists = rawConfig.models[provider].some(m => m.name === model);
+  if (!exists) {
+    rawConfig.models[provider].push({ provider, name: model });
+  }
+
+  rawConfig.defaultModel = { provider, name: model };
   saveConfig(rawConfig);
 }
 
 /**
- * Get provider config by type
+ * Get provider config
  */
-export function getProviderConfig(
-  providerType: string,
-): ProviderConfig | undefined {
+export function getProviderConfig(provider: string): ProviderConfig | undefined {
   const config = loadConfig();
-  return config.getProvider(providerType);
+  return config.getProvider(provider);
 }
 
 /**
- * Get all models as array
+ * Get all models
  */
-export function getAllModels(): Array<{ index: ModelIndex } & ModelEntry> {
+export function getAllModels(): ModelEntry[] {
   const config = loadConfig();
-  return config.getModels();
-}
-
-/**
- * Get a specific config value
- */
-export function getConfig(key?: string, subKey?: string): any {
-  const config = loadConfig();
-  if (!key) return config;
-
-  const keyConfig = (config as any)[key];
-  if (!keyConfig) return undefined;
-
-  if (subKey) {
-    return keyConfig[subKey];
-  }
-  return keyConfig;
-}
-
-/**
- * Update config value
- */
-export function updateConfig(updates: Partial<ConfigData>): ConfigData {
-  const current = loadConfig();
-  const currentData = current.toJSON();
-  const merged = mergeConfig(currentData, updates);
-  saveConfig(merged);
-  return merged;
+  return config.getAllModelsFlat();
 }

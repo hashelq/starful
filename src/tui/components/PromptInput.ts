@@ -94,6 +94,17 @@ export class PromptInput {
         return true;
       }
       
+      // Tab - select current suggestion
+      if (key.name === "tab" && this._searchSuggestions.isVisible()) {
+        const selected = this._searchSuggestions.getSelectedSuggestion();
+        if (selected) {
+          this.input.value = selected;
+          this._searchSuggestions.hide();
+          history.resetSearch();
+        }
+        return true;
+      }
+      
       // Reset cycling when typing
       history.resetIndex();
       return false;
